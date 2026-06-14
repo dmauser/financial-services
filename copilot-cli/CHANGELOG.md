@@ -6,6 +6,14 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+## [0.2.0] - Fix extension loading
+
+- **BREAKING**: rewrote `extension.mjs` and `registry.mjs` to match the actual `@github/copilot-sdk/extension` contract (`joinSession({ tools, hooks })`). The previous `session.registerAgent`/`registerSkill`/`registerMcpServer` calls were not real SDK methods, which caused the extension to show as **failed** in `Manage Extensions`.
+- Tools are now generated from the install tree at module load: every specialist agent, specialist skill, vertical skill, and slash-command agent/skill becomes a discovery tool the model can call (`fs_<slug>_role`, `fs_<slug>_skill_<name>`, `fs_<vertical>_skill_<name>`, `fs_cmd_<name>`, `fs_cmd_skill_<name>`).
+- New ambient tools: `fs_capabilities` (full map), `fs_instructions` (compliance posture), `fs_mcp_status` (enabled connectors).
+- Presence note injected via `onSessionStart` + `onUserPromptSubmitted` hooks so the agent learns the extension is available from turn 1.
+- Added a thin root `package.json` so `npx -y github:dmauser/financial-services init` works (npm requires a root manifest before it will run any bin).
+
 ## [0.1.0] - Initial port
 
 - Scaffold `copilot-cli/` subtree with `bin/cli.mjs` installer, `extension.mjs` + `registry.mjs` entrypoints.
