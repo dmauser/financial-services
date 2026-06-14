@@ -6,6 +6,10 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+## [0.2.1] - Emoji + table capabilities output
+
+- `fs_capabilities` now renders a finance-desk-style markdown table with emoji icons (📊 Earnings Review, 📒 GL Reconciliation, 🎯 Pitch Deck / M&A, 💰 Valuation Review, 🏦 Investment Banking, 💼 Private Equity, …) for both the 10 specialists and 9 verticals, plus a per-specialist / per-vertical skills detail section.
+
 ## [0.2.0] - Fix extension loading
 
 - **BREAKING**: rewrote `extension.mjs` and `registry.mjs` to match the actual `@github/copilot-sdk/extension` contract (`joinSession({ tools, hooks })`). The previous `session.registerAgent`/`registerSkill`/`registerMcpServer` calls were not real SDK methods, which caused the extension to show as **failed** in `Manage Extensions`.

@@ -56,6 +56,41 @@ function tool(name, description, handler) {
     };
 }
 
+// Friendly metadata (icon + display name) for each specialist and vertical.
+// Mirrors the finance-desk pattern so `fs_capabilities` renders a real
+// emoji-tagged markdown table instead of a flat bullet list.
+const SPECIALIST_META = {
+    "earnings-reviewer":   { icon: "📊", domain: "Earnings Review" },
+    "gl-reconciler":       { icon: "📒", domain: "GL Reconciliation" },
+    "kyc-screener":        { icon: "🔍", domain: "KYC / AML Screening" },
+    "market-researcher":   { icon: "📈", domain: "Market Research" },
+    "meeting-prep-agent":  { icon: "📋", domain: "Meeting Prep" },
+    "model-builder":       { icon: "🏗️", domain: "Financial Modeling" },
+    "month-end-closer":    { icon: "🗓️", domain: "Month-End Close" },
+    "pitch-agent":         { icon: "🎯", domain: "Pitch Deck / M&A" },
+    "statement-auditor":   { icon: "🧾", domain: "Statement Audit" },
+    "valuation-reviewer":  { icon: "💰", domain: "Valuation Review" },
+};
+
+const VERTICAL_META = {
+    "investment-banking":  { icon: "🏦", domain: "Investment Banking" },
+    "equity-research":     { icon: "📈", domain: "Equity Research" },
+    "private-equity":      { icon: "💼", domain: "Private Equity" },
+    "wealth-management":   { icon: "💎", domain: "Wealth Management" },
+    "financial-analysis":  { icon: "🧮", domain: "Financial Analysis" },
+    "fund-admin":          { icon: "🗂️", domain: "Fund Administration" },
+    "operations":          { icon: "⚙️", domain: "Operations" },
+    "lseg":                { icon: "🌐", domain: "LSEG (partner)" },
+    "spglobal":            { icon: "🌎", domain: "S&P Global (partner)" },
+};
+
+function specialistMeta(slug) {
+    return SPECIALIST_META[slug] || { icon: "•", domain: slug };
+}
+function verticalMeta(slug) {
+    return VERTICAL_META[slug] || { icon: "•", domain: slug };
+}
+
 async function loadMd(p) {
     if (!existsSync(p)) {
         return { textResultForLlm: `File not found: ${p}`, resultType: "failure" };
@@ -97,30 +132,76 @@ builtTools.push(
         "Return the full Claude-for-Financial-Services capability map: every specialist, vertical skill, and slash-command agent/skill available in this extension. Call this first when the user asks what financial-services can do.",
         async () => {
             const lines = ["# Claude for Financial Services — capabilities", ""];
+
+            // Specialists table — emoji + friendly domain + role tool + skill count.
             lines.push(`## Specialists (${inventory.specialists.length})`);
-            for (const s of inventory.specialists) {
+            lines.push("");
+            lines.push("| # | Domain | Slug | Role tool | Skills |");
+            lines.push("|---|--------|------|-----------|--------|");
+            inventory.specialists.forEach((s, i) => {
+                const meta = specialistMeta(s.slug);
                 const safe = safeName(s.slug);
-                lines.push(`- **${s.slug}** — \`fs_${safe}_role\`` +
-                    (s.skills.length ? ` · skills: ${s.skills.map((k) => `\`fs_${safe}_skill_${safeName(k)}\``).join(", ")}` : ""));
-            }
+                lines.push(
+                    `| ${i + 1} | ${meta.icon} ${meta.domain} | \`${s.slug}\` | \`fs_${safe}_role\` | ${s.skills.length} |`,
+                );
+            });
+
+            // Verticals table — emoji + friendly domain + skill count.
             lines.push("", `## Verticals (${inventory.verticals.length})`);
-            for (const v of inventory.verticals) {
-                const safe = safeName(v.vertical);
-                lines.push(`- **${v.vertical}** — ${v.skills.length ? v.skills.map((k) => `\`fs_${safe}_skill_${safeName(k)}\``).join(", ") : "(no skills)"}`);
+            lines.push("");
+            lines.push("| # | Vertical | Slug | Skills |");
+            lines.push("|---|----------|------|--------|");
+            inventory.verticals.forEach((v, i) => {
+                const meta = verticalMeta(v.vertical);
+                lines.push(
+                    `| ${i + 1} | ${meta.icon} ${meta.domain} | \`${v.vertical}\` | ${v.skills.length} |`,
+                );
+            });
+
+            // Per-specialist skills detail.
+            lines.push("", "## Specialist skills (detail)");
+            for (const s of inventory.specialists) {
+                if (!s.skills.length) continue;
+                const meta = specialistMeta(s.slug);
+                const safe = safeName(s.slug);
+                lines.push("", `### ${meta.icon} ${meta.domain} — \`${s.slug}\``);
+                for (const skill of s.skills) {
+                    lines.push(`- \`fs_${safe}_skill_${safeName(skill)}\` — ${skill}`);
+                }
             }
+
+            // Per-vertical skills detail.
+            lines.push("", "## Vertical skills (detail)");
+            for (const v of inventory.verticals) {
+                if (!v.skills.length) continue;
+                const meta = verticalMeta(v.vertical);
+                const safe = safeName(v.vertical);
+                lines.push("", `### ${meta.icon} ${meta.domain} — \`${v.vertical}\``);
+                for (const skill of v.skills) {
+                    lines.push(`- \`fs_${safe}_skill_${safeName(skill)}\` — ${skill}`);
+                }
+            }
+
+            // Slash-command wrappers.
             if (inventory.cmdAgents.length) {
                 lines.push("", `## Slash-command agents (${inventory.cmdAgents.length})`);
-                for (const a of inventory.cmdAgents) lines.push(`- \`fs_cmd_${safeName(a)}\``);
+                for (const a of inventory.cmdAgents) lines.push(`- \`fs_cmd_${safeName(a)}\` — ${a}`);
             }
             if (inventory.cmdSkills.length) {
                 lines.push("", `## Slash-command skills (${inventory.cmdSkills.length})`);
-                for (const a of inventory.cmdSkills) lines.push(`- \`fs_cmd_skill_${safeName(a)}\``);
+                for (const a of inventory.cmdSkills) lines.push(`- \`fs_cmd_skill_${safeName(a)}\` — ${a}`);
             }
-            lines.push("", "## How to use",
+
+            lines.push(
+                "",
+                "## How to use",
                 "1. Pick a specialist whose domain fits the user request.",
                 "2. Call its `_role` tool to load the system prompt and workflow.",
                 "3. Call individual `_skill_*` tools for the deliverables they describe.",
-                "4. Cite every number; mark unsourced figures `[UNSOURCED]`.");
+                "4. Cite every number; mark unsourced figures `[UNSOURCED]`.",
+                "",
+                "Use `fs_instructions` for the compliance posture, `fs_mcp_status` for enabled data connectors.",
+            );
             return lines.join("\n");
         },
     ),
