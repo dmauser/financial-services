@@ -167,6 +167,17 @@ def cmd_apply(base: str) -> int:
         git("add", rel(pj))
         bumped.append((rel(plugin_root(pj)), bv, new))
 
+        # Mirror copilot-cli/package.json version to the root package.json
+        # (the root is a thin npx shim that re-exports the same bin).
+        if pj == ROOT / "copilot-cli" / "package.json":
+            root_pkg = ROOT / "package.json"
+            if root_pkg.is_file():
+                rdata = json.loads(root_pkg.read_text())
+                if rdata.get("version") != new:
+                    rdata["version"] = new
+                    root_pkg.write_text(json.dumps(rdata, indent=2) + "\n")
+                    git("add", rel(root_pkg))
+
     for name, old, new in bumped:
         print(f"[version-bump] {name}: {old or '(new)'} -> {new}")
     return 0
