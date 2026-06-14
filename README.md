@@ -52,6 +52,9 @@ Restart Copilot CLI after `init`. The extension surfaces as `financial-services`
 
 Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.copilot-plugin/marketplace.json) — 1 umbrella + 9 verticals + 10 specialists.
 
+> [!IMPORTANT]
+> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B delivers the same agent and skill **markdown content**, but the runtime JS tools are only loaded if the Copilot CLI plugin host honors a plugin's `extension.mjs` — that part of the marketplace contract is still evolving and unverified. Per-vertical / per-specialist plugins (e.g. `pitch-agent@`, `equity-research@`) install the markdown only; they don't carry `extension.mjs`. **For the full experience, prefer Path A.**
+
 See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
 
 ## Goal of this fork
