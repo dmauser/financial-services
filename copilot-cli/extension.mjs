@@ -4,27 +4,32 @@
 // ~/.copilot/extensions/financial-services/. It MUST call joinSession() with
 // a tools array; pure-markdown extensions do NOT load.
 //
-// Pattern matches finance-desk / compute-desk / relocation-desk: thin
-// wrapper that imports the SDK statically and delegates tool generation
-// to ./registry.mjs.
+// Wires three things into the session:
+//   - tools     — 169 MCP tools generated from the install tree (registry.mjs)
+//   - commands  — 41 slash commands (39 from MAPPING.md + /fs-help + /finance-help)
+//   - hooks     — onSessionStart / onUserPromptSubmitted that inject a presence note
+//
+// CommandHandler returns void; to drive the agent we call session.send(prompt).
+// Since the handlers need the session that joinSession() produces, we hold the
+// joined session in a closure-captured ref (`sessionRef`) and pass a getter
+// (() => sessionRef) into buildCommands().
 
 import { joinSession } from "@github/copilot-sdk/extension";
-import { tools, presence, inventoryCounts } from "./registry.mjs";
+import { tools, presence, inventoryCounts, buildCommands, commandCount } from "./registry.mjs";
 
+let sessionRef = null;
 let presenceAnnounced = false;
+
+const commands = buildCommands(() => sessionRef);
 
 const session = await joinSession({
     tools,
+    commands,
     hooks: {
-        // SessionStart fires on startup / new / resume. Inject the presence
-        // note as session-level additional context so the agent knows
-        // financial-services exists from turn 1.
         onSessionStart: async () => {
             presenceAnnounced = true;
             return { additionalContext: presence };
         },
-        // Belt-and-suspenders: re-announce on the very first user prompt
-        // in case onSessionStart didn't fire on this CLI build.
         onUserPromptSubmitted: async (input) => {
             if (presenceAnnounced) return;
             if (!input?.prompt) return;
@@ -34,7 +39,10 @@ const session = await joinSession({
     },
 });
 
+sessionRef = session;
+
 await session.log(
     `financial-services loaded — ${inventoryCounts.specialists} specialists, ` +
-        `${inventoryCounts.verticals} verticals, ${inventoryCounts.tools} tools`,
+        `${inventoryCounts.verticals} verticals, ${inventoryCounts.tools} tools, ` +
+        `${commandCount} slash commands (try /fs-help)`,
 );

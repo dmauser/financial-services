@@ -22,7 +22,7 @@
 // the actual joinSession call.
 
 import { readFile } from "node:fs/promises";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -34,6 +34,7 @@ const CMD_AGENTS_DIR = join(HERE, "commands", "agents");
 const CMD_SKILLS_DIR = join(HERE, "commands", "skills");
 const INSTRUCTIONS_DIR = join(HERE, "instructions");
 const MCP_CONFIG = join(HERE, "mcp", ".mcp.json");
+const MAPPING_PATH = join(HERE, "commands", "MAPPING.md");
 
 function listDirs(p) {
     if (!existsSync(p)) return [];
@@ -310,9 +311,121 @@ export const inventoryCounts = {
 export const presence =
     `[financial-services] The Claude for Financial Services extension is LOADED in this session ` +
     `(${inventoryCounts.specialists} specialists, ${inventoryCounts.verticals} verticals, ` +
-    `${inventoryCounts.cmdAgents} command-agents, ${inventoryCounts.tools} tools). ` +
+    `${inventoryCounts.cmdAgents} command-agents, ${inventoryCounts.tools} tools, plus 39 slash commands). ` +
     `Discovery: call \`fs_capabilities\` for the full map; \`fs_instructions\` for compliance posture; ` +
     `\`fs_mcp_status\` for enabled data connectors. ` +
+    `Slash commands: \`/dcf\`, \`/lbo\`, \`/comps\`, \`/cim\`, \`/earnings\`, \`/initiate\`, \`/ic-memo\`, ` +
+    `\`/3-statement-model\`, \`/merger-model\`, \`/client-review\`, \`/financial-plan\`, \`/debug-model\`, ` +
+    `plus 27 more (\`/buyer-list\`, \`/teaser\`, \`/morning-note\`, \`/tlh\`, \`/rebalance\`, \`/screen\`, ...). ` +
+    `Type \`/fs-help\` to list everything. ` +
     `Tool naming: \`fs_<slug>_role\` loads an agent system prompt, \`fs_<slug>_skill_<name>\` loads a skill. ` +
     `When the user mentions investment banking, equity research, private equity, wealth management, ` +
     `fund admin, KYC/AML, earnings, valuation, comps, DCF, LBO, or pitch decks — call \`fs_capabilities\` first.`;
+
+// ── Slash commands (parsed from commands/MAPPING.md) ────────────────────
+//
+// The Copilot CLI host exposes registered CommandDefinition entries as
+// `/<name>` in the slash-command picker. The handler returns void; to drive
+// the agent we call `session.send(prompt)` to inject a new user turn that
+// embeds the underlying workflow markdown plus the user's args.
+//
+// MAPPING.md is the canonical source of truth — re-parsed here so adding a
+// new row in MAPPING + re-running scripts/sync-copilot.py automatically
+// surfaces the new slash command on the next extension load.
+
+function parseMappingTable(mappingText) {
+    // Match rows like: | `/dcf` | financial-analysis | agent | `verticals/.../dcf.md` |
+    const re = /^\|\s*`\/([a-z0-9-]+)`\s*\|\s*([a-z0-9-]+)\s*\|\s*(agent|skill)\s*\|/gim;
+    const rows = [];
+    for (const m of mappingText.matchAll(re)) {
+        rows.push({ name: m[1], vertical: m[2], kind: m[3] });
+    }
+    return rows;
+}
+
+function loadMappingRows() {
+    if (!existsSync(MAPPING_PATH)) return [];
+    try {
+        return parseMappingTable(readFileSync(MAPPING_PATH, "utf8"));
+    } catch {
+        return [];
+    }
+}
+
+const MAPPING_ROWS = loadMappingRows();
+
+function buildPrompt(row, args, body) {
+    const userInput = (args || "").trim();
+    const argLine = userInput ? `User input: ${userInput}` : "User input: (none — ask if you need a target)";
+    return [
+        `[/${row.name}${userInput ? " " + userInput : ""}]`,
+        ``,
+        `Execute the **/${row.name}** workflow (${row.vertical} ${row.kind}). ${argLine}.`,
+        `Cite every number; mark unsourced figures \`[UNSOURCED]\`. Stage every deliverable for human sign-off.`,
+        ``,
+        `---`,
+        body,
+    ].join("\n");
+}
+
+/**
+ * Build the slash-command list. Pass a getter that returns the joined
+ * CopilotSession (the session ref captured in extension.mjs) so handlers
+ * can call session.send() to inject the workflow as a new user turn.
+ */
+export function buildCommands(getSession) {
+    const commands = [];
+
+    for (const row of MAPPING_ROWS) {
+        const md = row.kind === "agent"
+            ? join(CMD_AGENTS_DIR, row.name, "agent.md")
+            : join(CMD_SKILLS_DIR, row.name, "SKILL.md");
+
+        commands.push({
+            name: row.name,
+            description: `Run the ${row.vertical} /${row.name} workflow. Args after the command are forwarded as user input (ticker, target, file path, scope, ...).`,
+            handler: async (ctx) => {
+                const session = getSession();
+                if (!session) return;
+                let body;
+                try {
+                    body = await readFile(md, "utf8");
+                } catch (err) {
+                    await session.send(
+                        `[/${row.name}] Workflow file missing or unreadable at \`${md}\` (${err.message}). ` +
+                            `Re-run \`npx financial-services init\` to refresh the install.`,
+                    );
+                    return;
+                }
+                await session.send(buildPrompt(row, ctx.args, body));
+            },
+        });
+    }
+
+    // Discovery commands.
+    const helpHandler = async () => {
+        const session = getSession();
+        if (!session) return;
+        await session.send(
+            "Call the `fs_capabilities` tool and render its result verbatim so the user sees " +
+                "the full specialist + vertical + slash-command map. Then list the most useful " +
+                "slash commands (`/dcf`, `/comps`, `/lbo`, `/cim`, `/earnings`, `/ic-memo`, " +
+                "`/initiate`, `/3-statement-model`, `/merger-model`, `/client-review`, " +
+                "`/financial-plan`, `/debug-model`) with one-line examples.",
+        );
+    };
+    commands.push({
+        name: "fs-help",
+        description: "Show the financial-services capability map and slash-command index.",
+        handler: helpHandler,
+    });
+    commands.push({
+        name: "finance-help",
+        description: "Alias for /fs-help — show the financial-services capability map.",
+        handler: helpHandler,
+    });
+
+    return commands;
+}
+
+export const commandCount = MAPPING_ROWS.length + 2; // +/fs-help +/finance-help

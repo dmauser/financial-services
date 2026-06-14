@@ -6,6 +6,17 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+## [0.3.0] - Real slash commands
+
+- Register **41 slash commands** with the Copilot CLI host via the `@github/copilot-sdk/extension` `joinSession({ commands })` API:
+  - **12 command-agents**: `/dcf`, `/lbo`, `/comps`, `/3-statement-model`, `/debug-model`, `/cim`, `/merger-model`, `/earnings`, `/initiate`, `/ic-memo`, `/financial-plan`, `/client-review`.
+  - **27 command-skills**: `/buyer-list`, `/teaser`, `/one-pager`, `/process-letter`, `/deal-tracker`, `/morning-note`, `/sector`, `/screen`, `/catalysts`, `/thesis`, `/earnings-preview`, `/model-update`, `/dd-checklist`, `/dd-prep`, `/unit-economics`, `/returns`, `/source`, `/screen-deal`, `/portfolio`, `/value-creation`, `/ai-readiness`, `/tlh`, `/rebalance`, `/proposal`, `/client-report`, `/competitive-analysis`, `/ppt-template`.
+  - **2 discovery commands**: `/fs-help` + `/finance-help` alias — render the `fs_capabilities` map.
+- Slash commands are parsed from the canonical `commands/MAPPING.md`. Adding a row + `python scripts/sync-copilot.py` is the only step needed to surface a new slash command on the next extension load.
+- Each handler reads the underlying `commands/agents/<name>/agent.md` or `commands/skills/<name>/SKILL.md` workflow markdown and forwards it (with the user's args appended as `User input: …`) into the session via `session.send()`. The agent then executes the workflow as a normal user turn.
+- The 39 underlying `fs_cmd_*` / `fs_cmd_skill_*` MCP tools continue to work unchanged — slash-command registration is additive.
+- Banner + presence note updated to advertise slash commands.
+
 ## [0.2.1] - Emoji + table capabilities output
 
 - `fs_capabilities` now renders a finance-desk-style markdown table with emoji icons (📊 Earnings Review, 📒 GL Reconciliation, 🎯 Pitch Deck / M&A, 💰 Valuation Review, 🏦 Investment Banking, 💼 Private Equity, …) for both the 10 specialists and 9 verticals, plus a per-specialist / per-vertical skills detail section.

@@ -57,6 +57,31 @@ Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.
 
 See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
 
+### Slash commands
+
+Once the extension is loaded (Path A), the following slash commands are registered with Copilot CLI's slash-command picker. Type `/` and start typing to autocomplete; everything after the command name is forwarded as user input (ticker, target, file path, scope, …) and the corresponding workflow markdown is executed as a new turn.
+
+| Command | Domain | Example |
+|---|---|---|
+| `/dcf` | Financial analysis | `/dcf NVDA` |
+| `/lbo` | Financial analysis | `/lbo "Acme Industrials"` |
+| `/comps` | Financial analysis | `/comps MSFT GOOGL META` |
+| `/3-statement-model` | Financial analysis | `/3-statement-model AMZN` |
+| `/debug-model` | Financial analysis | `/debug-model models/q3-forecast.xlsx` |
+| `/cim` | Investment banking | `/cim "Project Helios"` |
+| `/merger-model` | Investment banking | `/merger-model "MSFT acquires AVGO"` |
+| `/earnings` | Equity research | `/earnings AAPL` |
+| `/initiate` | Equity research | `/initiate ASML` |
+| `/ic-memo` | Private equity | `/ic-memo "Series B Acme"` |
+| `/financial-plan` | Wealth management | `/financial-plan "Smith family, retire 2032"` |
+| `/client-review` | Wealth management | `/client-review "Q3 review for Acme Foundation"` |
+
+Plus 27 single-shot skills: `/buyer-list`, `/teaser`, `/one-pager`, `/process-letter`, `/deal-tracker`, `/morning-note`, `/sector`, `/screen`, `/catalysts`, `/thesis`, `/earnings-preview`, `/model-update`, `/dd-checklist`, `/dd-prep`, `/unit-economics`, `/returns`, `/source`, `/screen-deal`, `/portfolio`, `/value-creation`, `/ai-readiness`, `/tlh`, `/rebalance`, `/proposal`, `/client-report`, `/competitive-analysis`, `/ppt-template`.
+
+Discovery: type **`/fs-help`** (or `/finance-help`) to print the full capability map and the most useful command examples without leaving the chat.
+
+The canonical command list lives in [`copilot-cli/commands/MAPPING.md`](./copilot-cli/commands/MAPPING.md). Add a row, run `python scripts/sync-copilot.py`, and the new slash command surfaces on the next extension load.
+
 ## Goal of this fork
 
 The goal of this repository is to **port [`anthropics/financial-services`](https://github.com/anthropics/financial-services) to GitHub Copilot CLI** — taking the Claude-native agents, skills, slash commands and MCP connectors and making them installable as a Copilot CLI extension (`npx -y github:dmauser/financial-services init`) and as a Copilot CLI plugin marketplace (`/plugin marketplace add dmauser/financial-services`). The Claude side stays untouched and canonical at upstream; this fork only adds the `copilot-cli/` delivery channel and the sync tooling that keeps it in lock-step with upstream.
