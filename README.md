@@ -1,8 +1,33 @@
-# Claude for Financial Services
+# Claude for Financial Services — GitHub Copilot CLI port
+
+> [!NOTE]
+> **This fork (`dmauser/financial-services`) publishes only the GitHub Copilot CLI port** under [`copilot-cli/`](./copilot-cli). For the upstream **Claude Cowork / Claude Code / Managed Agents** distribution, install from [`anthropics/financial-services`](https://github.com/anthropics/financial-services) — that's the canonical home for the Claude side.
+>
+> The `plugins/` and `managed-agent-cookbooks/` trees in this fork exist as the **single source of truth** that the Copilot CLI mirror is generated from. Don't install Claude plugins from this fork — go upstream.
+
+## Goal of this fork
+
+The goal of this repository is to **port [`anthropics/financial-services`](https://github.com/anthropics/financial-services) to GitHub Copilot CLI** — taking the Claude-native agents, skills, slash commands and MCP connectors and making them installable as a Copilot CLI extension (`npx -y github:dmauser/financial-services init`) and as a Copilot CLI plugin marketplace (`/plugin marketplace add dmauser/financial-services`). The Claude side stays untouched and canonical at upstream; this fork only adds the `copilot-cli/` delivery channel and the sync tooling that keeps it in lock-step with upstream.
+
+### Staying in sync with upstream
+
+This fork tracks `anthropics/financial-services` automatically. A scheduled GitHub Action (`.github/workflows/upstream-sync.yml`) runs daily, pulls upstream `main`, and opens a PR titled `chore: sync upstream anthropics/financial-services` with any new commits. The PR runs the normal CI gates (`check.py`, `sync-copilot.py` drift check, version-bump) so reviewing the diff is enough — merge it and the Copilot CLI mirror picks up the new agent / skill / MCP automatically on the next `sync-copilot.py` run.
+
+Manual one-off sync from a clone of this repo:
+
+```bash
+git remote add upstream https://github.com/anthropics/financial-services.git   # once
+git fetch upstream
+git checkout -b sync/upstream-$(date +%Y%m%d)
+git merge upstream/main                  # resolve conflicts only inside copilot-cli/ if any
+python scripts/sync-copilot.py           # regenerate the Copilot CLI mirror
+python scripts/check.py                  # must report 0 issues
+git push origin HEAD && gh pr create
+```
 
 Reference agents, skills, and data connectors for the financial-services workflows we see most — investment banking, equity research, private equity, and wealth management.
 
-Everything here is available **two ways from one source**: install it as a [Claude Cowork](https://claude.com/product/cowork) plugin, or deploy it through the [Claude Managed Agents API](https://docs.claude.com/en/api/managed-agents) behind your own workflow engine. Same system prompt, same skills — you choose where it runs.
+Everything here is available **two ways from one source**: install it as a [Claude Cowork](https://claude.com/product/cowork) plugin (from upstream), or deploy it through the [Claude Managed Agents API](https://docs.claude.com/en/api/managed-agents) behind your own workflow engine. This fork adds a third channel: **GitHub Copilot CLI** — see [`copilot-cli/`](./copilot-cli).
 
 > [!IMPORTANT]
 > Nothing in this repository constitutes investment, legal, tax, or accounting advice. These agents draft analyst work product — models, memos, research notes, reconciliations — for review by a qualified professional. They do not make investment recommendations, execute transactions, bind risk, post to a ledger, or approve onboarding; every output is staged for human sign-off. You are responsible for verifying outputs and for compliance with the laws and regulations that apply to your firm.
@@ -41,20 +66,51 @@ plugins/
   vertical-plugins/            # Skill + command bundles by FSI vertical, plus MCP connectors
   partner-built/               # Partner-authored plugins (LSEG, S&P Global)
 managed-agent-cookbooks/       # Claude Managed Agent cookbooks — one dir per agent
+copilot-cli/                   # GitHub Copilot CLI extension + plugin marketplace (mirrors plugins/)
 claude-for-msft-365-install/   # Admin tooling to provision the Claude Microsoft 365 add-in
-scripts/                       # deploy-managed-agent.sh · check.py · validate.py · orchestrate.py · sync-agent-skills.py
+scripts/                       # deploy-managed-agent.sh · check.py · validate.py · orchestrate.py · sync-agent-skills.py · sync-copilot.py
 ```
 
 ## Getting Started
 
-### Cowork
+### GitHub Copilot CLI (this fork's primary distribution)
+
+```bash
+# Install into ~/.copilot/extensions/financial-services/ (one machine, all repos)
+npx -y github:dmauser/financial-services init
+
+# Or install only into the current repo
+npx -y github:dmauser/financial-services init --project
+
+# Enable individual MCP connectors (still requires provider credentials)
+npx financial-services mcp enable daloopa
+npx financial-services mcp enable factset
+```
+
+Or install via Copilot CLI's native `/plugin` marketplace:
+
+```text
+/plugin marketplace add dmauser/financial-services
+/plugin install financial-services@financial-services-copilot
+   # or à la carte:
+/plugin install pitch-agent@financial-services-copilot
+/plugin install equity-research@financial-services-copilot
+```
+
+After install, the 10 named specialists, all 39 slash commands, the 12 MCP connectors (disabled by default), and the compliance/house-style instructions load automatically. See [`copilot-cli/README.md`](./copilot-cli/README.md) for the full install reference and [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows.
+
+---
+
+The sections below describe the **upstream Claude distributions** ([`anthropics/financial-services`](https://github.com/anthropics/financial-services)). Install them from upstream, not from this fork.
+
+### Cowork (upstream)
 
 In Cowork, open **Settings → Plugins → Add plugin** and either:
 
 - **Paste this repo URL** — `https://github.com/anthropics/financial-services` — then pick the agents and verticals you want from the marketplace list, or
 - **Upload a zip** — zip any directory under `plugins/` (e.g. `plugins/agent-plugins/pitch-agent/`) and drop it in.
 
-### Claude Code
+### Claude Code (upstream)
 
 ```bash
 # Add the marketplace
@@ -75,7 +131,7 @@ claude plugin install equity-research@claude-for-financial-services
 
 Once installed, agents appear in Cowork dispatch, skills fire automatically when relevant, and slash commands are available in your session (`/comps`, `/dcf`, `/earnings`, `/ic-memo`, …).
 
-### Claude Managed Agents
+### Claude Managed Agents (upstream)
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -251,9 +307,9 @@ These are reference templates — they get better when you tune them to how your
 
 Everything here is markdown and YAML. Fork, edit, PR. For new content:
 
-- New skill → add it under `plugins/vertical-plugins/<vertical>/skills/`, then run `python3 scripts/sync-agent-skills.py` to propagate to any agent that bundles it.
-- New agent → `plugins/agent-plugins/<slug>/` (with `agents/<slug>.md` + `skills/`) and a matching `managed-agent-cookbooks/<slug>/`.
-- Run `python3 scripts/check.py` before pushing — it lints every manifest, verifies all cross-file references resolve, and fails if any bundled skill has drifted from its vertical source.
+- New skill → add it under `plugins/vertical-plugins/<vertical>/skills/`, then run `python3 scripts/sync-agent-skills.py` to propagate to any agent that bundles it, **and** `python3 scripts/sync-copilot.py` to propagate into `copilot-cli/`.
+- New agent → `plugins/agent-plugins/<slug>/` (with `agents/<slug>.md` + `skills/`) and a matching `managed-agent-cookbooks/<slug>/`. `python3 scripts/sync-copilot.py` mirrors it into `copilot-cli/extensions/financial-services/specialists/<slug>/`.
+- Run `python3 scripts/check.py` before pushing — it lints every manifest, verifies all cross-file references resolve, and fails if any bundled skill or `copilot-cli/` mirror has drifted from its source.
 
 ## License
 

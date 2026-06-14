@@ -1,0 +1,77 @@
+{
+  "_comment": "MCP connectors for the financial-services Copilot CLI extension. All disabled by default; flip 'disabled' to false (or run `npx financial-services mcp enable <name>`) and supply credentials per provider docs.",
+  "mcpServers": {
+    "daloopa": {
+      "type": "http",
+      "url": "https://mcp.daloopa.com/server/mcp",
+      "disabled": true,
+      "_docs": "https://www.daloopa.com/ - institutional research data; subscription required"
+    },
+    "morningstar": {
+      "type": "http",
+      "url": "https://mcp.morningstar.com/mcp",
+      "disabled": true,
+      "_docs": "https://www.morningstar.com/ - fund/security analytics; subscription required"
+    },
+    "sp-global": {
+      "type": "http",
+      "url": "https://kfinance.kensho.com/integrations/mcp",
+      "disabled": true,
+      "_docs": "https://www.spglobal.com/ - Capital IQ data via Kensho; subscription required"
+    },
+    "factset": {
+      "type": "http",
+      "url": "https://mcp.factset.com/mcp",
+      "disabled": true,
+      "_docs": "https://www.factset.com/ - terminal data; subscription required"
+    },
+    "moodys": {
+      "type": "http",
+      "url": "https://api.moodys.com/genai-ready-data/m1/mcp",
+      "disabled": true,
+      "_docs": "https://www.moodys.com/ - credit/risk data; subscription required"
+    },
+    "mtnewswire": {
+      "type": "http",
+      "url": "https://vast-mcp.blueskyapi.com/mtnewswires",
+      "disabled": true,
+      "_docs": "https://www.mtnewswires.com/ - financial news; subscription required"
+    },
+    "aiera": {
+      "type": "http",
+      "url": "https://mcp-pub.aiera.com",
+      "disabled": true,
+      "_docs": "https://www.aiera.com/ - earnings calls + transcripts; subscription required"
+    },
+    "lseg": {
+      "type": "http",
+      "url": "https://api.analytics.lseg.com/lfa/mcp",
+      "disabled": true,
+      "_docs": "https://www.lseg.com/ - Refinitiv/LSEG analytics; subscription required"
+    },
+    "pitchbook": {
+      "type": "http",
+      "url": "https://premium.mcp.pitchbook.com/mcp",
+      "disabled": true,
+      "_docs": "https://pitchbook.com/ - private markets data; subscription required"
+    },
+    "chronograph": {
+      "type": "http",
+      "url": "https://ai.chronograph.pe/mcp",
+      "disabled": true,
+      "_docs": "https://www.chronograph.pe/ - PE portfolio monitoring; subscription required"
+    },
+    "egnyte": {
+      "type": "http",
+      "url": "https://mcp-server.egnyte.com/mcp",
+      "disabled": true,
+      "_docs": "https://www.egnyte.com/ - content/document store; subscription required"
+    },
+    "box": {
+      "type": "http",
+      "url": "https://mcp.box.com",
+      "disabled": true,
+      "_docs": "https://www.box.com/ - content/document store; subscription required"
+    }
+  }
+}

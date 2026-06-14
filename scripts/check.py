@@ -170,6 +170,79 @@ for md in sorted(PLUGINS.glob("agent-plugins/*/agents/*.md")):
                 f"plugins/agent-plugins/{slug}/skills/{ref}/ is not bundled"
             )
 
+# --- 4d. copilot-cli/ mirror is in sync with plugins/ source ---------------
+COPILOT = ROOT / "copilot-cli"
+if COPILOT.is_dir():
+    spec_root = COPILOT / "extensions" / "financial-services" / "specialists"
+    # 4d.1 each specialist's agent.md and bundled skills/ match agent-plugins/<slug>/
+    for src_slug in sorted((PLUGINS / "agent-plugins").iterdir()):
+        if not src_slug.is_dir():
+            continue
+        slug = src_slug.name
+        src_md = src_slug / "agents" / f"{slug}.md"
+        dst_md = spec_root / slug / "agents" / f"{slug}.md"
+        if src_md.is_file():
+            if not dst_md.is_file():
+                err(f"copilot-mirror: missing {rel(dst_md)} (run scripts/sync-copilot.py)")
+            elif src_md.read_bytes() != dst_md.read_bytes():
+                err(f"copilot-mirror: {rel(dst_md)} drifted from {rel(src_md)} "
+                    f"(run scripts/sync-copilot.py)")
+        src_sk = src_slug / "skills"
+        dst_sk = spec_root / slug / "skills"
+        if src_sk.is_dir():
+            if not dst_sk.is_dir():
+                err(f"copilot-mirror: missing {rel(dst_sk)}/ (run scripts/sync-copilot.py)")
+            else:
+                cmp = filecmp.dircmp(src_sk, dst_sk)
+                # recurse manually to catch deep drift
+                def _walk(c):
+                    if c.diff_files or c.left_only or c.right_only:
+                        return True
+                    return any(_walk(sub) for sub in c.subdirs.values())
+                if _walk(cmp):
+                    err(f"copilot-mirror: {rel(dst_sk)}/ drifted from {rel(src_sk)}/ "
+                        f"(run scripts/sync-copilot.py)")
+    # 4d.2 each vertical's skills/ and commands/ match its plugins/vertical-plugins/ source
+    vert_root = COPILOT / "verticals"
+    src_verticals = []
+    for vp_root, _ in (("vertical-plugins", None), ("partner-built", None)):
+        d = PLUGINS / vp_root
+        if d.is_dir():
+            src_verticals.extend(p for p in d.iterdir() if p.is_dir())
+    for src in sorted(src_verticals):
+        for sub in ("skills", "commands"):
+            s = src / sub
+            d = vert_root / src.name / sub
+            if not s.is_dir():
+                continue
+            if not d.is_dir():
+                err(f"copilot-mirror: missing {rel(d)}/ (run scripts/sync-copilot.py)")
+                continue
+            cmp = filecmp.dircmp(s, d)
+            def _walk(c):
+                if c.diff_files or c.left_only or c.right_only:
+                    return True
+                return any(_walk(sub) for sub in c.subdirs.values())
+            if _walk(cmp):
+                err(f"copilot-mirror: {rel(d)}/ drifted from {rel(s)}/ "
+                    f"(run scripts/sync-copilot.py)")
+    # 4d.3 copilot-cli/package.json parses
+    pkg = COPILOT / "package.json"
+    if pkg.is_file():
+        checked += 1
+        try:
+            json.loads(pkg.read_text())
+        except json.JSONDecodeError as e:
+            err(f"JSON parse: {rel(pkg)}: {e}")
+    # 4d.4 mcp template parses
+    mcp_t = COPILOT / "mcp" / ".mcp.json.template"
+    if mcp_t.is_file():
+        checked += 1
+        try:
+            json.loads(mcp_t.read_text())
+        except json.JSONDecodeError as e:
+            err(f"JSON parse: {rel(mcp_t)}: {e}")
+
 # --- 4c. marketplace source paths resolve ----------------------------------
 mp = ROOT / ".claude-plugin" / "marketplace.json"
 for p in json.loads(mp.read_text()).get("plugins", []):

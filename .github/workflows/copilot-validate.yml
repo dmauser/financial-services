@@ -1,0 +1,45 @@
+name: copilot-validate
+
+# Validates the copilot-cli/ subtree:
+#  1. scripts/check.py - parses + cross-ref + drift between plugins/ source and
+#     copilot-cli/ mirror.
+#  2. cli.mjs --help smoke - confirms the installer script is syntactically valid
+#     Node and prints help without error.
+#
+# Runs in addition to plugin-validate.yml (which lints the .claude-plugin
+# manifests) and version-bump.yml (which enforces semver bumps).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.x' }
+      - run: pip install pyyaml
+      - run: python3 scripts/check.py
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Smoke test cli.mjs
+        run: node copilot-cli/bin/cli.mjs help
+      - name: Verify installer dry-run
+        run: |
+          node copilot-cli/bin/cli.mjs init --project
+          node copilot-cli/bin/cli.mjs status --project
+          node copilot-cli/bin/cli.mjs mcp list --project
+          node copilot-cli/bin/cli.mjs mcp enable daloopa --project
+          node copilot-cli/bin/cli.mjs mcp disable daloopa --project
+          node copilot-cli/bin/cli.mjs uninstall --project

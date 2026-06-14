@@ -1,0 +1,149 @@
+name: Upstream sync
+
+# Pulls new commits from anthropics/financial-services and opens a PR.
+# - Daily schedule (06:00 UTC) + manual dispatch.
+# - Uses a merge (not rebase) so upstream history stays intact and the diff
+#   is reviewable. If conflicts occur, the workflow still pushes the branch
+#   with conflict markers and opens a draft PR for human resolution.
+# - Regenerates the Copilot CLI mirror via scripts/sync-copilot.py so the
+#   port picks up any new upstream agents/skills/MCPs in the same PR.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Open PR even if no upstream changes"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  UPSTREAM_REPO: anthropics/financial-services
+  UPSTREAM_BRANCH: main
+  TARGET_BRANCH: main
+  PYTHONUTF8: "1"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch upstream "${UPSTREAM_BRANCH}" --tags
+
+      - name: Detect new upstream commits
+        id: detect
+        run: |
+          AHEAD=$(git rev-list --count "origin/${TARGET_BRANCH}..upstream/${UPSTREAM_BRANCH}")
+          echo "ahead=${AHEAD}" >> "$GITHUB_OUTPUT"
+          echo "Upstream is ${AHEAD} commit(s) ahead of origin/${TARGET_BRANCH}"
+          if [ "${AHEAD}" = "0" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create sync branch
+        if: steps.detect.outputs.skip != 'true'
+        id: branch
+        run: |
+          BRANCH="sync/upstream-$(date -u +%Y%m%d-%H%M%S)"
+          echo "name=${BRANCH}" >> "$GITHUB_OUTPUT"
+          git checkout -b "${BRANCH}" "origin/${TARGET_BRANCH}"
+
+      - name: Merge upstream
+        if: steps.detect.outputs.skip != 'true'
+        id: merge
+        continue-on-error: true
+        run: |
+          if git merge --no-ff --no-edit "upstream/${UPSTREAM_BRANCH}"; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+            git -c core.editor=true merge --abort || true
+            # Re-merge keeping conflicts in the working tree so the PR is reviewable.
+            git merge --no-ff --no-commit "upstream/${UPSTREAM_BRANCH}" || true
+            git add -A
+            git commit -m "chore: sync upstream ${UPSTREAM_REPO} (with conflicts — manual resolution required)" || true
+          fi
+
+      - name: Regenerate Copilot CLI mirror
+        if: steps.detect.outputs.skip != 'true' && steps.merge.outputs.conflict == 'false'
+        run: |
+          python scripts/sync-copilot.py
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "chore: regenerate copilot-cli mirror after upstream sync"
+          fi
+
+      - name: Run check.py
+        if: steps.detect.outputs.skip != 'true' && steps.merge.outputs.conflict == 'false'
+        continue-on-error: true
+        id: check
+        run: python scripts/check.py
+
+      - name: Push branch
+        if: steps.detect.outputs.skip != 'true'
+        run: git push origin "${{ steps.branch.outputs.name }}"
+
+      - name: Open pull request
+        if: steps.detect.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DRAFT_FLAG=""
+          TITLE="chore: sync upstream ${UPSTREAM_REPO}"
+          BODY_FILE=$(mktemp)
+          {
+            echo "Automated sync from \`${UPSTREAM_REPO}@${UPSTREAM_BRANCH}\`."
+            echo
+            echo "**Upstream commits pulled:** ${{ steps.detect.outputs.ahead }}"
+            echo
+            if [ "${{ steps.merge.outputs.conflict }}" = "true" ]; then
+              echo ":warning: **Merge conflicts** — branch contains conflict markers; resolve locally before merging."
+              DRAFT_FLAG="--draft"
+            fi
+            if [ "${{ steps.check.outcome }}" = "failure" ]; then
+              echo ":warning: \`scripts/check.py\` failed on this branch — review the workflow logs."
+              DRAFT_FLAG="--draft"
+            fi
+            echo
+            echo "### Reviewer checklist"
+            echo "- [ ] Diff under \`plugins/\` and \`managed-agent-cookbooks/\` matches upstream intent"
+            echo "- [ ] \`copilot-cli/\` mirror regenerated cleanly (no manual edits)"
+            echo "- [ ] \`scripts/check.py\` reports 0 issues"
+            echo "- [ ] If a new agent/vertical landed upstream, \`copilot-cli/commands/MAPPING.md\` and \`.copilot-plugin/marketplace.json\` reflect it"
+          } > "$BODY_FILE"
+          gh pr create \
+            --base   "${TARGET_BRANCH}" \
+            --head   "${{ steps.branch.outputs.name }}" \
+            --title  "${TITLE}" \
+            --body-file "$BODY_FILE" \
+            --label  "upstream-sync" \
+            $DRAFT_FLAG || gh pr edit "${{ steps.branch.outputs.name }}" --body-file "$BODY_FILE"
+
+      - name: No-op summary
+        if: steps.detect.outputs.skip == 'true'
+        run: echo "No new upstream commits — nothing to sync."

@@ -45,3 +45,6 @@ coverage/
 TASKS.md
 MEMORY.md
 .claude/worktrees/
+
+# Project-local Copilot CLI install (created by `npx financial-services init --project`)
+.copilot/

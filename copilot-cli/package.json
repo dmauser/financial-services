@@ -1,0 +1,39 @@
+{
+  "name": "financial-services",
+  "version": "0.1.0",
+  "description": "GitHub Copilot CLI extension + plugin marketplace for the Anthropic Claude for Financial Services agents, skills, and MCP connectors.",
+  "type": "module",
+  "main": "extension.mjs",
+  "bin": {
+    "financial-services": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "extension.mjs",
+    "registry.mjs",
+    "extensions",
+    "verticals",
+    "commands",
+    "mcp",
+    "instructions",
+    ".copilot-plugin",
+    "RECOMMENDATIONS.md",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "github-copilot-cli",
+    "copilot-extension",
+    "financial-services",
+    "fsi",
+    "claude-skills"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dmauser/financial-services.git"
+  }
+}

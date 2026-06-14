@@ -61,15 +61,23 @@ def resolve_base(explicit: str | None) -> str | None:
 
 
 def all_plugin_jsons() -> list[Path]:
-    """Every <plugin>/.claude-plugin/plugin.json in the repo."""
-    return sorted(
+    """Every <plugin>/.claude-plugin/plugin.json in the repo, plus
+    copilot-cli/package.json (which is versioned under the same policy)."""
+    jsons = sorted(
         p for p in ROOT.glob("**/.claude-plugin/plugin.json")
         if ".git/" not in str(p)
     )
+    pkg = ROOT / "copilot-cli" / "package.json"
+    if pkg.is_file():
+        jsons.append(pkg)
+    return jsons
 
 
 def plugin_root(plugin_json: Path) -> Path:
     # <root>/.claude-plugin/plugin.json -> <root>
+    # copilot-cli/package.json -> copilot-cli
+    if plugin_json.name == "package.json":
+        return plugin_json.parent
     return plugin_json.parent.parent
 
 
