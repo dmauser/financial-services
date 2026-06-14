@@ -5,6 +5,55 @@
 >
 > The `plugins/` and `managed-agent-cookbooks/` trees in this fork exist as the **single source of truth** that the Copilot CLI mirror is generated from. Don't install Claude plugins from this fork — go upstream.
 
+## Quick install (Copilot CLI)
+
+### Prerequisites
+
+- **GitHub Copilot CLI** installed and signed in — `gh extension install github/gh-copilot` and `gh auth login`, or follow [the Copilot CLI install docs](https://docs.github.com/en/copilot/github-copilot-in-the-cli). Verify with `copilot --version`.
+- **Node.js ≥ 18** on PATH — required by both install paths. Verify with `node --version`.
+- **Git** — needed by `npx` to clone the repo install.
+- *(Optional)* **Python ≥ 3.10** — only needed if you intend to run `scripts/check.py` / `scripts/sync-copilot.py` locally to contribute changes.
+- *(Optional)* **API keys** for any data connectors you plan to enable (FactSet, Daloopa, LSEG, S&P Global, Moody's, Pitchbook, etc.). The 12 MCP connectors ship **disabled by default** — enable individually after install.
+
+### Path A — Extension (npx installer)
+
+```bash
+# Install into ~/.copilot/extensions/financial-services/ (one machine, all repos)
+npx -y github:dmauser/financial-services init
+
+# Or install into ./.copilot/extensions/financial-services/ (this repo only)
+npx -y github:dmauser/financial-services init --project
+
+# Enable the data connectors you have credentials for (all start disabled)
+npx financial-services mcp enable factset
+npx financial-services mcp enable daloopa
+
+# Confirm install location, version, and MCP state
+npx financial-services status
+
+# Remove later
+npx -y github:dmauser/financial-services uninstall
+```
+
+Restart Copilot CLI after `init`. The extension surfaces as `financial-services` in `Manage Extensions` and registers ~169 discovery tools (`fs_capabilities`, `fs_<slug>_role`, `fs_<slug>_skill_<name>`, `fs_<vertical>_skill_<name>`, …). Try `> what can financial-services do?` — it'll call `fs_capabilities` and list every specialist and skill.
+
+> If `npx` errors with `ENOENT … package.json` after a prior install, clear the npx cache once: `Remove-Item -Recurse -Force "$env:LOCALAPPDATA\npm-cache\_npx"` (Windows) / `rm -rf ~/.npm/_npx` (Unix), then re-run `npx -y github:dmauser/financial-services init`.
+
+### Path B — Plugin marketplace
+
+```text
+/plugin marketplace add dmauser/financial-services
+/plugin install financial-services@financial-services-copilot     # umbrella (everything)
+
+# or install a single specialist / vertical
+/plugin install pitch-agent@financial-services-copilot
+/plugin install equity-research@financial-services-copilot
+```
+
+Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.copilot-plugin/marketplace.json) — 1 umbrella + 9 verticals + 10 specialists.
+
+See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
+
 ## Goal of this fork
 
 The goal of this repository is to **port [`anthropics/financial-services`](https://github.com/anthropics/financial-services) to GitHub Copilot CLI** — taking the Claude-native agents, skills, slash commands and MCP connectors and making them installable as a Copilot CLI extension (`npx -y github:dmauser/financial-services init`) and as a Copilot CLI plugin marketplace (`/plugin marketplace add dmauser/financial-services`). The Claude side stays untouched and canonical at upstream; this fork only adds the `copilot-cli/` delivery channel and the sync tooling that keeps it in lock-step with upstream.
