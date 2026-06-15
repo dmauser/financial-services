@@ -1,6 +1,6 @@
 {
   "name": "financial-services",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "GitHub Copilot CLI extension + plugin marketplace for the Anthropic Claude for Financial Services agents, skills, and MCP connectors.",
   "type": "module",
   "main": "extension.mjs",

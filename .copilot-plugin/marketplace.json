@@ -11,7 +11,7 @@
       "name": "financial-services",
       "displayName": "Claude for Financial Services (umbrella)",
       "description": "10 specialist agents, all skills, all 39 slash commands, plus a markdown orchestrator that routes incoming requests to the right specialist - all in a single Claude/Copilot plugin install. Functionally equivalent to the npx extension's runtime tools, delivered as Path B markdown content.",
-      "source": "./plugins/financial-services"
+      "source": "./copilot-cli/plugins/financial-services"
     }
   ]
 }

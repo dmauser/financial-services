@@ -41,50 +41,49 @@ Restart Copilot CLI after `init`. The extension surfaces as `financial-services`
 
 ### Path B — Plugin marketplace
 
-> Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` reads `.claude-plugin/marketplace.json` at the repo root and registers the marketplace under that file's `name` field, which is **`claude-for-financial-services`** (inherited unchanged from upstream — *not* `financial-services-copilot`). The plugin install syntax is `<plugin-name>@<marketplace-name>`.
+> Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` clones the repo and reads marketplace manifests from the repo root. This fork ships **two** marketplaces side-by-side:
+> - `.claude-plugin/marketplace.json` -> registers as **`claude-for-financial-services`** (inherited unchanged from upstream Anthropic; 20 individual plugins)
+> - `.copilot-plugin/marketplace.json` -> registers as **`financial-services-copilot`** (Copilot-dedicated; one umbrella plugin that bundles everything plus a routing orchestrator)
+>
+> A single `copilot plugin marketplace add dmauser/financial-services` registers both. Pick whichever install style you prefer below — they're not mutually exclusive.
 
 ```text
-# 1. Register the marketplace (one-time)
+# 1. Register both marketplaces (one-time, one command)
 copilot plugin marketplace add dmauser/financial-services
 
-# 2. Discover what's available
+# 2. Discover what's available in each
 copilot plugin marketplace list
 copilot plugin marketplace browse claude-for-financial-services
+copilot plugin marketplace browse financial-services-copilot
 
-# 3. Install one or more plugins
+# 3a. Per-specialist install (claude-for-financial-services)
 copilot plugin install financial-analysis@claude-for-financial-services
 copilot plugin install pitch-agent@claude-for-financial-services
 copilot plugin install equity-research@claude-for-financial-services
+
+# 3b. -OR- single umbrella install (financial-services-copilot)
+copilot plugin install financial-services@financial-services-copilot
 
 # 4. Verify
 copilot plugin list
 
 # Uninstall a single plugin
 copilot plugin uninstall financial-analysis@claude-for-financial-services
+copilot plugin uninstall financial-services@financial-services-copilot
 
-# Remove the marketplace altogether (also removes any plugins installed from it)
+# Remove a marketplace altogether (also removes plugins installed from it)
 copilot plugin marketplace remove claude-for-financial-services
+copilot plugin marketplace remove financial-services-copilot
 ```
 
-Valid plugin names: `financial-analysis`, `investment-banking`, `equity-research`, `private-equity`, `wealth-management`, `fund-admin`, `operations`, `lseg`, `sp-global`, `pitch-agent`, `market-researcher`, `earnings-reviewer`, `meeting-prep-agent`, `model-builder`, `gl-reconciler`, `kyc-screener`, `valuation-reviewer`, `month-end-closer`, `statement-auditor`, `claude-for-msft-365-install`.
+Valid plugin names in `claude-for-financial-services`: `financial-analysis`, `investment-banking`, `equity-research`, `private-equity`, `wealth-management`, `fund-admin`, `operations`, `lseg`, `sp-global`, `pitch-agent`, `market-researcher`, `earnings-reviewer`, `meeting-prep-agent`, `model-builder`, `gl-reconciler`, `kyc-screener`, `valuation-reviewer`, `month-end-closer`, `statement-auditor`, `claude-for-msft-365-install`.
+
+The only plugin in `financial-services-copilot` is `financial-services` (the umbrella). It bundles all 10 specialist agents, all 66 unique skills, all 39 slash commands, the shared MCP template, **and** a markdown orchestrator at `agents/financial-services.md` that routes incoming requests to the right specialist (mimicking Path A's `fs_capabilities` behavior). Source generated at [`copilot-cli/plugins/financial-services/`](./copilot-cli/plugins/financial-services/) by `scripts/sync-copilot.py` and drift-checked by `scripts/check.py`.
 
 If you previously installed and see `Marketplace "<name>" not found`, the registered name doesn't match what you typed after `@`. Run `copilot plugin marketplace list` to see the actual registered name and use that exact string.
 
-#### Path B umbrella — one plugin = everything
-
-If you want a single Path B install that gives you all 10 specialists + every skill + every slash command + a markdown orchestrator that routes between them, the fork ships a **Copilot-dedicated marketplace** under `copilot-cli/.copilot-plugin/` (kept separate from the upstream `.claude-plugin/marketplace.json` so daily upstream syncs never touch it):
-
-```text
-git clone https://github.com/dmauser/financial-services
-cd financial-services
-copilot plugin marketplace add ./copilot-cli
-copilot plugin install financial-services@financial-services-copilot
-```
-
-The umbrella plugin source is generated at [`copilot-cli/plugins/financial-services/`](./copilot-cli/plugins/financial-services/) by `scripts/sync-copilot.py` from the canonical `plugins/` tree, and drift-checked by `scripts/check.py`. **Markdown only** — no JS runtime tools; for in-process `fs_capabilities`, prefer Path A.
-
 > [!IMPORTANT]
-> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B (marketplace install) delivers the same agent and skill **markdown content**; runtime JS tools are not loaded by the plugin host. The Path B umbrella above gets you the equivalent agent + skill + slash-command coverage with a markdown orchestrator that mimics the Path A routing behavior. **For full runtime tool registration, prefer Path A.**
+> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B (marketplace install) delivers the same agent and skill **markdown content**; runtime JS tools are not loaded by the plugin host. The Path B umbrella gets you equivalent agent + skill + slash-command coverage with a markdown orchestrator that mimics Path A's routing behavior. **For full runtime tool registration, prefer Path A.**
 
 See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
 

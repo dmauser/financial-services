@@ -6,6 +6,16 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+## [0.4.1] - Repo-URL umbrella install
+
+- **Add root-level `.copilot-plugin/marketplace.json`** so a single `copilot plugin marketplace add dmauser/financial-services` registers BOTH marketplaces this fork ships in one shot - the upstream `claude-for-financial-services` (read from `.claude-plugin/marketplace.json`) AND the new `financial-services-copilot` umbrella (read from `.copilot-plugin/marketplace.json`). No clone required for the umbrella install:
+  ```text
+  copilot plugin marketplace add dmauser/financial-services
+  copilot plugin install financial-services@financial-services-copilot
+  ```
+  The `.copilot-plugin/` directory at root is sibling to (not inside) `.claude-plugin/`, so upstream syncs from `anthropics/financial-services` still never conflict on it.
+- `scripts/sync-copilot.py` `sync_copilot_marketplace()` now writes both root and `copilot-cli/` copies of the dedicated Copilot marketplace, with `source` paths adjusted per location (`./copilot-cli/plugins/financial-services` from root, `./plugins/financial-services` from `copilot-cli/`). Both are drift-checked by `scripts/check.py`.
+
 ## [0.4.0] - Path B umbrella plugin
 
 - **New umbrella plugin.** Adds a single Path B install that bundles every Claude for Financial Services specialist + skill + slash command + a markdown orchestrator. Source at `copilot-cli/plugins/financial-services/` is **generated** by `scripts/sync-copilot.py` from the canonical `plugins/` tree. Layout follows the standard Claude/Copilot plugin format (flat `agents/<slug>.md`, `skills/<name>/SKILL.md`, `commands/<name>.md`).
