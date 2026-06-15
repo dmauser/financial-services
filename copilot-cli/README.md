@@ -43,30 +43,35 @@ After install, restart Copilot CLI (or run `/restart`) and confirm with `/env` t
 
 ### Path B: native `/plugin` marketplace (for users who already manage Copilot CLI plugins)
 
+> Copilot CLI reads `.claude-plugin/marketplace.json` at the repo root and registers the marketplace under that file's `name` field, which is **`claude-for-financial-services`** (inherited unchanged from upstream Anthropic — *not* `financial-services-copilot`). Install syntax is `<plugin-name>@<marketplace-name>`.
+
 ```text
-/plugin marketplace add dmauser/financial-services
-/plugin install financial-services@financial-services-copilot
+copilot plugin marketplace add dmauser/financial-services
+copilot plugin marketplace browse claude-for-financial-services
+copilot plugin install financial-analysis@claude-for-financial-services
 ```
 
 Or install individual plugins from the marketplace - e.g. just the equity-research vertical or just the pitch-agent specialist:
 
 ```text
-/plugin install equity-research@financial-services-copilot
-/plugin install pitch-agent@financial-services-copilot
+copilot plugin install equity-research@claude-for-financial-services
+copilot plugin install pitch-agent@claude-for-financial-services
 ```
+
+Valid plugin names: `financial-analysis`, `investment-banking`, `equity-research`, `private-equity`, `wealth-management`, `fund-admin`, `operations`, `lseg`, `sp-global`, `pitch-agent`, `market-researcher`, `earnings-reviewer`, `meeting-prep-agent`, `model-builder`, `gl-reconciler`, `kyc-screener`, `valuation-reviewer`, `month-end-closer`, `statement-auditor`, `claude-for-msft-365-install`. There is **no umbrella plugin** under Path B — for the all-in-one extension experience use Path A.
 
 Uninstall a single plugin, or remove the marketplace altogether (which also removes anything installed from it):
 
 ```text
-/plugin list                                                  # see what's installed
-/plugin uninstall financial-services@financial-services-copilot
-/plugin uninstall equity-research@financial-services-copilot
+copilot plugin list                                              # see what's installed
+copilot plugin uninstall financial-analysis@claude-for-financial-services
+copilot plugin uninstall equity-research@claude-for-financial-services
 
-/plugin marketplace list                                      # see registered marketplaces
-/plugin marketplace remove financial-services-copilot
+copilot plugin marketplace list                                  # see registered marketplaces
+copilot plugin marketplace remove claude-for-financial-services
 ```
 
-The native marketplace manifest lives at [`.copilot-plugin/marketplace.json`](./.copilot-plugin/marketplace.json) and points at the same files the `npx` installer copies.
+The native marketplace manifest is the root [`/.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json) (inherited unchanged from upstream — Copilot CLI reads the exact same file Claude Code does, so there is **no separate Copilot-CLI marketplace manifest to maintain**).
 
 ## MCP connectors
 

@@ -32,8 +32,7 @@ Cowork plugins and Claude Managed Agent templates for financial services. Each n
 │   ├── verticals/<vertical>/        #   ← mirror of plugins/vertical-plugins/<vertical>/
 │   ├── commands/                    #   /comps, /dcf, … wrappers (12 agents + 27 skills) generated from MAPPING.md
 │   ├── mcp/.mcp.json.template       #   12 connectors, disabled by default
-│   ├── instructions/                #   AGENTS.md + path-specific .instructions.md
-│   └── .copilot-plugin/marketplace.json  #   native /plugin install manifest
+│   └── instructions/                #   AGENTS.md + path-specific .instructions.md
 ├── claude-for-msft-365-install/     # admin tooling for the Microsoft 365 add-in (separate from FSI plugins)
 └── scripts/                         # deploy-managed-agent.sh, check.py, validate.py, orchestrate.py, sync-agent-skills.py, sync-copilot.py
 ```

@@ -41,25 +41,37 @@ Restart Copilot CLI after `init`. The extension surfaces as `financial-services`
 
 ### Path B — Plugin marketplace
 
-```text
-/plugin marketplace add dmauser/financial-services
-/plugin install financial-services@financial-services-copilot     # umbrella (everything)
+> Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` reads `.claude-plugin/marketplace.json` at the repo root and registers the marketplace under that file's `name` field, which is **`claude-for-financial-services`** (inherited unchanged from upstream — *not* `financial-services-copilot`). The plugin install syntax is `<plugin-name>@<marketplace-name>`.
 
-# or install a single specialist / vertical
-/plugin install pitch-agent@financial-services-copilot
-/plugin install equity-research@financial-services-copilot
+```text
+# 1. Register the marketplace (one-time)
+copilot plugin marketplace add dmauser/financial-services
+
+# 2. Discover what's available
+copilot plugin marketplace list
+copilot plugin marketplace browse claude-for-financial-services
+
+# 3. Install one or more plugins
+copilot plugin install financial-analysis@claude-for-financial-services
+copilot plugin install pitch-agent@claude-for-financial-services
+copilot plugin install equity-research@claude-for-financial-services
+
+# 4. Verify
+copilot plugin list
 
 # Uninstall a single plugin
-/plugin uninstall financial-services@financial-services-copilot
+copilot plugin uninstall financial-analysis@claude-for-financial-services
 
-# Remove the marketplace entirely (also removes any plugins installed from it)
-/plugin marketplace remove financial-services-copilot
+# Remove the marketplace altogether (also removes any plugins installed from it)
+copilot plugin marketplace remove claude-for-financial-services
 ```
 
-Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.copilot-plugin/marketplace.json) — 1 umbrella + 9 verticals + 10 specialists. Use `/plugin list` to see what's installed and `/plugin marketplace list` to see registered marketplaces.
+Valid plugin names: `financial-analysis`, `investment-banking`, `equity-research`, `private-equity`, `wealth-management`, `fund-admin`, `operations`, `lseg`, `sp-global`, `pitch-agent`, `market-researcher`, `earnings-reviewer`, `meeting-prep-agent`, `model-builder`, `gl-reconciler`, `kyc-screener`, `valuation-reviewer`, `month-end-closer`, `statement-auditor`, `claude-for-msft-365-install`.
+
+If you previously installed and see `Marketplace "<name>" not found`, the registered name doesn't match what you typed after `@`. Run `copilot plugin marketplace list` to see the actual registered name and use that exact string.
 
 > [!IMPORTANT]
-> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B delivers the same agent and skill **markdown content**, but the runtime JS tools are only loaded if the Copilot CLI plugin host honors a plugin's `extension.mjs` — that part of the marketplace contract is still evolving and unverified. Per-vertical / per-specialist plugins (e.g. `pitch-agent@`, `equity-research@`) install the markdown only; they don't carry `extension.mjs`. **For the full experience, prefer Path A.**
+> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders, plus the umbrella "everything in one" install. Path B installs the same agent and skill **markdown content** one Claude plugin at a time, but the runtime JS tools are only loaded if the Copilot CLI plugin host honors a plugin's `extension.mjs` — that part of the marketplace contract is still evolving and unverified, and there is no umbrella plugin (install the per-vertical / per-specialist names listed above). **For the full experience, prefer Path A.**
 
 See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
 
@@ -170,14 +182,13 @@ npx financial-services mcp enable daloopa
 npx financial-services mcp enable factset
 ```
 
-Or install via Copilot CLI's native `/plugin` marketplace:
+Or install via Copilot CLI's native `/plugin` marketplace (registered as `claude-for-financial-services`):
 
 ```text
-/plugin marketplace add dmauser/financial-services
-/plugin install financial-services@financial-services-copilot
-   # or à la carte:
-/plugin install pitch-agent@financial-services-copilot
-/plugin install equity-research@financial-services-copilot
+copilot plugin marketplace add dmauser/financial-services
+copilot plugin install financial-analysis@claude-for-financial-services
+copilot plugin install pitch-agent@claude-for-financial-services
+copilot plugin install equity-research@claude-for-financial-services
 ```
 
 After install, the 10 named specialists, all 39 slash commands, the 12 MCP connectors (disabled by default), and the compliance/house-style instructions load automatically. See [`copilot-cli/README.md`](./copilot-cli/README.md) for the full install reference and [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows.

@@ -6,8 +6,13 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
-- **Fix `/plugin install ...@financial-services-copilot` "Marketplace not found" error.** Copilot CLI's `/plugin marketplace add <owner>/<repo>` looks for `.copilot-plugin/marketplace.json` at the **repo root**, but the canonical file lives at `copilot-cli/.copilot-plugin/marketplace.json`. `scripts/sync-copilot.py` now generates `<repo-root>/.copilot-plugin/marketplace.json` from the canonical file, rebasing each plugin's `source` (`..` -> `copilot-cli`, `../verticals/...` -> `copilot-cli/verticals/...`) so the marketplace is discoverable from the repo root. `scripts/check.py` enforces no drift between the two.
+- **Docs fix: `/plugin install ...@<marketplace>` syntax now matches reality.** Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` reads `.claude-plugin/marketplace.json` (not `.copilot-plugin/`) at the repo root and registers the marketplace under that file's `name` field — currently `claude-for-financial-services`, inherited unchanged from upstream Anthropic. README Path B now uses the correct name (`<plugin>@claude-for-financial-services`) and lists the 20 actual installable plugin names. Note that Path B has no umbrella plugin — use Path A for the all-in-one experience.
+- **Remove `copilot-cli/.copilot-plugin/` entirely.** Empirical testing confirmed Copilot CLI adopts Claude's plugin format verbatim and reads the same root `.claude-plugin/marketplace.json` Claude Code does, so a separate Copilot-native marketplace manifest is redundant. Path B install (`copilot plugin install <name>@claude-for-financial-services`) works against the existing 20 Claude plugins with zero Copilot-specific duplication. The `extension.mjs` JS runtime (Path A) was already loading content from `extensions/`, `verticals/`, `commands/`, `mcp/`, `instructions/` only — never from `.copilot-plugin/` — so removing it has no effect on the npx installer or the in-process tool registration. Cleaned up the corresponding `package.json` `files` entry, `bin/cli.mjs` copy list, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/workflows/upstream-sync.yml`, and the prior `sync_root_marketplace()` / drift-check logic added in 0.3.1.
 - Add `LICENSE` and `NOTICE` files at the `copilot-cli/` package root so the npm-publishable sub-package carries the Apache-2.0 text and upstream attribution to `anthropics/financial-services` independently of the repo root. License section added to `README.md`. Root `NOTICE` file also added.
+
+## [0.3.1] - Pre-existing on `main` (superseded by the docs fix above)
+
+- Earlier attempt at fixing the marketplace install via a generated root `.copilot-plugin/marketplace.json`. Replaced by the docs fix in `[Unreleased]` once empirical testing showed Copilot CLI uses `.claude-plugin/` instead.
 
 ## [0.3.0] - Real slash commands
 

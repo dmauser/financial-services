@@ -70,7 +70,7 @@ A plugin's `.claude-plugin/plugin.json` `version` (and `copilot-cli/package.json
 ## Adding content
 
 - **New skill** → add under `plugins/vertical-plugins/<vertical>/skills/<name>/SKILL.md`, then run **both** sync scripts.
-- **New agent** → create both `plugins/agent-plugins/<slug>/` (with `.claude-plugin/plugin.json`, `agents/<slug>.md`, and bundled `skills/`) **and** `managed-agent-cookbooks/<slug>/` (with `agent.yaml`, `subagents/*.yaml`, `README.md`, `steering-examples.json`). Register it in `.claude-plugin/marketplace.json` **and** in `copilot-cli/.copilot-plugin/marketplace.json`. Run `sync-copilot.py`. Mirror the structure of an existing pair like `gl-reconciler`.
+- **New agent** → create both `plugins/agent-plugins/<slug>/` (with `.claude-plugin/plugin.json`, `agents/<slug>.md`, and bundled `skills/`) **and** `managed-agent-cookbooks/<slug>/` (with `agent.yaml`, `subagents/*.yaml`, `README.md`, `steering-examples.json`). Register it in `.claude-plugin/marketplace.json` (Copilot CLI reads the same file). Run `sync-copilot.py`. Mirror the structure of an existing pair like `gl-reconciler`.
 - **New slash command** → add the canonical command file under `plugins/vertical-plugins/<vertical>/commands/<name>.md`, then add a row to `copilot-cli/commands/MAPPING.md` choosing `agent` or `skill`, then run `sync-copilot.py`.
 - `agents/<slug>.md` must start with `---` YAML frontmatter containing `name` + `description`.
 - Inside `agent.md` prose, refer to a skill as ``` `skill-slug` ``` (backticked, kebab-case) — `check.py` enforces that any such reference is actually bundled in that agent's `skills/`.

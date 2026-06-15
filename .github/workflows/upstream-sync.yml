@@ -134,7 +134,7 @@ jobs:
             echo "- [ ] Diff under \`plugins/\` and \`managed-agent-cookbooks/\` matches upstream intent"
             echo "- [ ] \`copilot-cli/\` mirror regenerated cleanly (no manual edits)"
             echo "- [ ] \`scripts/check.py\` reports 0 issues"
-            echo "- [ ] If a new agent/vertical landed upstream, \`copilot-cli/commands/MAPPING.md\` and \`.copilot-plugin/marketplace.json\` reflect it"
+            echo "- [ ] If a new agent/vertical landed upstream, \`copilot-cli/commands/MAPPING.md\` reflects it (Copilot CLI reads \`.claude-plugin/marketplace.json\` directly — no separate Copilot marketplace to maintain)"
           } > "$BODY_FILE"
           gh pr create \
             --base   "${TARGET_BRANCH}" \

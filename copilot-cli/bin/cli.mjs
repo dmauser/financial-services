@@ -69,7 +69,6 @@ async function init({ project }) {
     'commands',
     'mcp',
     'instructions',
-    '.copilot-plugin',
     'RECOMMENDATIONS.md',
     'README.md',
     'CHANGELOG.md',
