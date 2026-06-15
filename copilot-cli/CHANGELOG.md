@@ -6,6 +6,11 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+## [0.4.3] - Empty MCP servers in umbrella by default
+
+- **Bug fix.** Copilot CLI's plugin host attempts to connect to every server listed in a plugin's `.mcp.json` on plugin load, **ignoring `disabled: true` flags**. The 0.4.2 umbrella shipped the full 12-connector catalog with `disabled: true`, but Copilot CLI tried to connect anyway, surfacing user-visible "Failed to connect to MCP server" errors for paid connectors (Daloopa, Moody's, FactSet, S&P Global, Morningstar, ...).
+- **Fix:** umbrella plugin's `.mcp.json` now ships with an **empty `mcpServers: {}`** object. The full 12-connector catalog still ships in a sibling `.mcp.json.template` for opt-in copy-paste. Plugin README documents the enabling flow. Path A behavior (`copilot-cli/mcp/.mcp.json.template` -> `npx financial-services mcp enable <name>`) is unaffected.
+
 ## [0.4.2] - Repurpose root .claude-plugin marketplace as Copilot umbrella
 
 - **Critical fix.** Copilot CLI's `marketplace add <owner>/<repo>` ONLY reads `.claude-plugin/marketplace.json` at the repo root - `.copilot-plugin/` is ignored (verified empirically by user 2026-06-14: `Marketplace "financial-services-copilot" not found`). The 0.4.0/0.4.1 dual-marketplace approach didn't work.

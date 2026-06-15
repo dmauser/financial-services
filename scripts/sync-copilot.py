@@ -427,10 +427,26 @@ def sync_umbrella(dest: Path | None = None) -> int:
         orchestrator, encoding="utf-8"
     )
 
-    # 5. MCP template -> .mcp.json (host /mcp UI reads .mcp.json from plugin root).
+    # 5. MCP servers - ship the umbrella's own .mcp.json with an EMPTY mcpServers
+    #    object (Copilot CLI plugin host attempts to connect to anything listed
+    #    here on plugin load, ignoring `disabled: true`). Catalog of connector
+    #    definitions ships alongside as .mcp.json.template for opt-in copy-paste.
     mcp_src = COPILOT / "mcp" / ".mcp.json.template"
+    empty_mcp = {
+        "_comment": (
+            "Empty by default - Copilot CLI plugin host tries to connect to every "
+            "server listed here on plugin load. Most upstream connectors require a "
+            "paid subscription. Open .mcp.json.template (sibling file), copy the "
+            "block(s) you have credentials for into this file's `mcpServers`, "
+            "supply env vars per the provider docs, and restart Copilot CLI."
+        ),
+        "mcpServers": {},
+    }
+    (out / ".mcp.json").write_text(
+        json.dumps(empty_mcp, indent=2) + "\n", encoding="utf-8"
+    )
     if mcp_src.is_file():
-        shutil.copy2(mcp_src, out / ".mcp.json")
+        shutil.copy2(mcp_src, out / ".mcp.json.template")
 
     # 6. README
     (out / "README.md").write_text(
@@ -445,8 +461,16 @@ def sync_umbrella(dest: Path | None = None) -> int:
         "Install:\n\n"
         "```text\n"
         "copilot plugin marketplace add dmauser/financial-services\n"
-        "copilot plugin install financial-services@claude-for-financial-services\n"
+        "copilot plugin install financial-services@financial-services-copilot\n"
         "```\n\n"
+        "## MCP connectors (opt-in)\n\n"
+        "`.mcp.json` ships **empty** - Copilot CLI's plugin host attempts to connect\n"
+        "to every server listed there on plugin load (it ignores `disabled: true`),\n"
+        "and most upstream connectors require paid subscriptions. To enable one:\n\n"
+        "1. Open `.mcp.json.template` (sibling file) for the catalog of 12 connectors.\n"
+        "2. Copy the entry you want into `.mcp.json`'s `mcpServers` object.\n"
+        "3. Supply credentials per the provider docs.\n"
+        "4. Restart Copilot CLI.\n\n"
         "For the runtime tool registration (`fs_capabilities`, `fs_<slug>_role`, ...) use\n"
         "the npx extension instead: `npx -y github:dmauser/financial-services init`.\n",
         encoding="utf-8",

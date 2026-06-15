@@ -13,8 +13,19 @@ Install:
 
 ```text
 copilot plugin marketplace add dmauser/financial-services
-copilot plugin install financial-services@claude-for-financial-services
+copilot plugin install financial-services@financial-services-copilot
 ```
+
+## MCP connectors (opt-in)
+
+`.mcp.json` ships **empty** - Copilot CLI's plugin host attempts to connect
+to every server listed there on plugin load (it ignores `disabled: true`),
+and most upstream connectors require paid subscriptions. To enable one:
+
+1. Open `.mcp.json.template` (sibling file) for the catalog of 12 connectors.
+2. Copy the entry you want into `.mcp.json`'s `mcpServers` object.
+3. Supply credentials per the provider docs.
+4. Restart Copilot CLI.
 
 For the runtime tool registration (`fs_capabilities`, `fs_<slug>_role`, ...) use
 the npx extension instead: `npx -y github:dmauser/financial-services init`.
