@@ -179,16 +179,14 @@ npx financial-services mcp enable daloopa
 npx financial-services mcp enable factset
 ```
 
-Or install via Copilot CLI's native `/plugin` marketplace (registered as `claude-for-financial-services`):
+Or install via Copilot CLI's native `/plugin` marketplace (registered as `financial-services-copilot`, single umbrella plugin):
 
 ```text
 copilot plugin marketplace add dmauser/financial-services
-copilot plugin install financial-analysis@claude-for-financial-services
-copilot plugin install pitch-agent@claude-for-financial-services
-copilot plugin install equity-research@claude-for-financial-services
+copilot plugin install financial-services@financial-services-copilot
 ```
 
-After install, the 10 named specialists, all 39 slash commands, the 12 MCP connectors (disabled by default), and the compliance/house-style instructions load automatically. See [`copilot-cli/README.md`](./copilot-cli/README.md) for the full install reference and [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows.
+The umbrella delivers all 10 named specialists, all 66 unique skills, all 39 slash commands, the 12 MCP connectors (disabled by default), and the compliance/house-style instructions in a single install. See [`copilot-cli/README.md`](./copilot-cli/README.md) for the full install reference and [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows. For full runtime tool registration (the `fs_*` discovery tools), prefer Path A above.
 
 ---
 
@@ -251,7 +249,7 @@ Start with **financial-analysis** — it carries the shared modeling skills and 
 
 | Plugin | What it adds |
 |---|---|
-| **[financial-analysis](./plugins/vertical-plugins/financial-analysis)** *(core)* | Comps, DCF, LBO, 3-statement, deck QC, Excel audit. All 11 data connectors. |
+| **[financial-analysis](./plugins/vertical-plugins/financial-analysis)** *(core)* | Comps, DCF, LBO, 3-statement, deck QC, Excel audit. All 12 data connectors. |
 | **[investment-banking](./plugins/vertical-plugins/investment-banking)** | CIMs, teasers, process letters, buyer lists, merger models, deal tracking. |
 | **[equity-research](./plugins/vertical-plugins/equity-research)** | Earnings notes, initiations, model updates, thesis and catalyst tracking. |
 | **[private-equity](./plugins/vertical-plugins/private-equity)** | Sourcing, screening, diligence checklists, IC memos, portfolio monitoring. |
