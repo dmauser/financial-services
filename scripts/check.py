@@ -242,6 +242,50 @@ if COPILOT.is_dir():
             json.loads(mcp_t.read_text())
         except json.JSONDecodeError as e:
             err(f"JSON parse: {rel(mcp_t)}: {e}")
+    # 4d.5 umbrella plugin tree + .copilot-plugin/marketplace.json are
+    # in lock-step with what scripts/sync-copilot.py would generate from
+    # the canonical sources. Re-run the generator into a temp tree and
+    # diff so any hand-edit (or out-of-date sync) shows up as drift.
+    umbrella = COPILOT / "plugins" / "financial-services"
+    cp_mp = COPILOT / ".copilot-plugin" / "marketplace.json"
+    if umbrella.is_dir() or cp_mp.is_file():
+        import importlib.util as _ilu
+        import tempfile as _tmp
+        spec = _ilu.spec_from_file_location(
+            "_sync_copilot", ROOT / "scripts" / "sync-copilot.py"
+        )
+        sc = _ilu.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(sc)
+        except Exception as e:
+            err(f"copilot-mirror: failed to import sync-copilot.py for drift check: {e}")
+        else:
+            with _tmp.TemporaryDirectory() as td:
+                tmp_root = Path(td)
+                shadow_umbrella = tmp_root / "umbrella"
+                shadow_mp_dir = tmp_root / "mp"
+                try:
+                    sc.sync_umbrella(dest=shadow_umbrella)
+                    sc.sync_copilot_marketplace(dest_dir=shadow_mp_dir)
+                except Exception as e:
+                    err(f"copilot-mirror: drift-check generator raised: {e}")
+                else:
+                    if umbrella.is_dir() and shadow_umbrella.is_dir():
+                        cmp = filecmp.dircmp(umbrella, shadow_umbrella)
+                        def _walk_u(c):
+                            if c.diff_files or c.left_only or c.right_only:
+                                return True
+                            return any(_walk_u(sub) for sub in c.subdirs.values())
+                        if _walk_u(cmp):
+                            err(f"copilot-mirror: {rel(umbrella)}/ drifted from "
+                                f"sync-copilot.py output (run scripts/sync-copilot.py)")
+                        checked += 1
+                    shadow_mp_file = shadow_mp_dir / "marketplace.json"
+                    if cp_mp.is_file() and shadow_mp_file.is_file():
+                        if cp_mp.read_text(encoding="utf-8") != shadow_mp_file.read_text(encoding="utf-8"):
+                            err(f"copilot-mirror: {rel(cp_mp)} drifted from "
+                                f"sync-copilot.py output (run scripts/sync-copilot.py)")
+                        checked += 1
 
 # --- 4c. marketplace source paths resolve ----------------------------------
 mp = ROOT / ".claude-plugin" / "marketplace.json"

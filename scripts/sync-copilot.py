@@ -24,6 +24,7 @@ Idempotent. Run after editing anything under plugins/.
 from __future__ import annotations
 
 import filecmp
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -234,6 +235,279 @@ def sync_commands() -> tuple[int, int]:
     return agents, skills
 
 
+UMBRELLA_ROOT = COPILOT / "plugins" / "financial-services"
+
+
+def _read_frontmatter(md_path: Path) -> dict:
+    """Parse a tiny YAML frontmatter (name, description). Returns empty dict on failure."""
+    if not md_path.is_file():
+        return {}
+    text = md_path.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end < 0:
+        return {}
+    out = {}
+    current_key = None
+    for line in text[3:end].splitlines():
+        line = line.rstrip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith(" ") and current_key:
+            out[current_key] += " " + line.strip()
+            continue
+        if ":" in line:
+            k, _, v = line.partition(":")
+            current_key = k.strip()
+            out[current_key] = v.strip().strip('"').strip("'")
+        else:
+            current_key = None
+    return out
+
+
+ORCHESTRATOR_HEADER = """---
+name: financial-services
+description: Umbrella router for the Claude for Financial Services suite. Reads the user's request, identifies which specialist owns the workflow, and dispatches to the right agent or skill. Use as the default entry point when the user asks "what can financial-services do" or describes a task without naming a specialist.
+tags: [orchestrator, financial-services]
+---
+
+# Financial Services - Orchestrator
+
+You are the Financial Services orchestrator. You don't do the work yourself - you route to one of {n_specialists} specialist agents (or one of {n_commands} slash commands) bundled in this plugin. Mirror the runtime `fs_capabilities` tool from the npx extension: when the user asks "what can you do?", reply with the specialist + slash-command tables below. For any other request, identify the correct specialist (or skill / slash command) and hand off by following its workflow.
+
+## Compliance posture
+
+These workflows draft analyst work product (memos, models, research notes, reconciliations) for human sign-off. Never make investment recommendations, execute transactions, post to ledgers, or approve onboarding autonomously. If the user asks for any of those, decline and explain why.
+
+## Specialists ({n_specialists})
+
+{specialist_table}
+
+## Slash commands ({n_commands})
+
+All slash commands are bundled in this plugin's `commands/` directory and selectable via `/`. Use them as targeted shortcuts when the user names the workflow directly (e.g. "run a DCF on NVDA" -> `/dcf NVDA`).
+
+{command_list}
+
+## Routing rules
+
+1. **Named specialist or slash command** -> hand off directly.
+2. **Workflow described, not named** -> match the description against the table above; pick the closest specialist; hand off.
+3. **Multi-step / cross-specialist task** -> decompose, hand off to each specialist in sequence; re-orchestrate between handoffs.
+4. **Out of scope** (general LLM chat, non-FSI requests) -> answer normally without invoking a specialist.
+
+## Bundled MCP connectors
+
+This plugin ships `.mcp.json` with the same 12 connectors the npx extension installs (factset, daloopa, capiq, lseg, moodys, msft365, box, pitchbook, sec, web, polygon, alpaca). All ship **disabled** - enable individually in the host's `/mcp` UI before invoking workflows that depend on external data.
+"""
+
+
+def _build_specialist_table(specialists: list[tuple[str, str]]) -> str:
+    if not specialists:
+        return "_(no specialists found)_"
+    lines = ["| Specialist | What it does |", "|---|---|"]
+    for slug, desc in specialists:
+        lines.append(f"| `{slug}` | {desc} |")
+    return "\n".join(lines)
+
+
+def _build_command_list(commands: list[str]) -> str:
+    if not commands:
+        return "_(no slash commands found)_"
+    return "\n".join(f"- `/{c}`" for c in sorted(commands))
+
+
+def sync_umbrella(dest: Path | None = None) -> int:
+    """Synthesize a single umbrella plugin at copilot-cli/plugins/financial-services/
+    that bundles all specialist agents, all unique skills, and all slash commands
+    in the flat layout the Claude/Copilot plugin loader expects.
+
+    Source of truth: plugins/agent-plugins/, plugins/vertical-plugins/,
+    plugins/partner-built/, and copilot-cli/commands/ (already generated from MAPPING.md).
+
+    `dest` overrides the default output path (UMBRELLA_ROOT). Used by check.py to
+    regenerate into a temp dir and diff against the committed tree.
+    """
+    out = dest if dest is not None else UMBRELLA_ROOT
+    if out.exists():
+        shutil.rmtree(out)
+    (out / ".claude-plugin").mkdir(parents=True)
+    (out / "agents").mkdir()
+    (out / "skills").mkdir()
+    (out / "commands").mkdir()
+
+    # Mirror copilot-cli's package version into the plugin manifest.
+    pkg_version = "0.0.0"
+    pkg = COPILOT / "package.json"
+    if pkg.is_file():
+        try:
+            pkg_version = json.loads(pkg.read_text()).get("version", "0.0.0")
+        except json.JSONDecodeError:
+            pass
+
+    manifest = {
+        "name": "financial-services",
+        "version": pkg_version,
+        "description": (
+            "Umbrella plugin for Claude for Financial Services: 10 specialist agents, "
+            "all skills, all 39 slash commands, and an orchestrator that routes between "
+            "them. Equivalent to the npx extension delivered as a single Path B install. "
+            "Generated by scripts/sync-copilot.py - do not hand-edit."
+        ),
+        "author": {"name": "dmauser (Copilot CLI port)"},
+    }
+    (out / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+
+    # 1. Specialist agents -> agents/<slug>.md (flat copy)
+    specialists: list[tuple[str, str]] = []
+    src_root = PLUGINS / "agent-plugins"
+    if src_root.is_dir():
+        for slug_dir in sorted(p for p in src_root.iterdir() if p.is_dir()):
+            slug = slug_dir.name
+            src_md = slug_dir / "agents" / f"{slug}.md"
+            if not src_md.is_file():
+                continue
+            shutil.copy2(src_md, out / "agents" / f"{slug}.md")
+            fm = _read_frontmatter(src_md)
+            specialists.append((slug, fm.get("description", "")))
+
+    # 2. Unique skills, deduped by name across vertical-plugins/, partner-built/,
+    #    and any specialist-bundled skills not already covered by a vertical.
+    seen_skills: set[str] = set()
+    skill_sources: list[Path] = []
+    for vp_root in ("vertical-plugins", "partner-built"):
+        d = PLUGINS / vp_root
+        if not d.is_dir():
+            continue
+        for vert in sorted(p for p in d.iterdir() if p.is_dir()):
+            sk = vert / "skills"
+            if not sk.is_dir():
+                continue
+            for s in sorted(p for p in sk.iterdir() if p.is_dir()):
+                if (s / "SKILL.md").is_file():
+                    skill_sources.append(s)
+    if src_root.is_dir():
+        for slug_dir in sorted(p for p in src_root.iterdir() if p.is_dir()):
+            sk = slug_dir / "skills"
+            if not sk.is_dir():
+                continue
+            for s in sorted(p for p in sk.iterdir() if p.is_dir()):
+                if (s / "SKILL.md").is_file():
+                    skill_sources.append(s)
+    for s in skill_sources:
+        if s.name in seen_skills:
+            continue
+        seen_skills.add(s.name)
+        shutil.copytree(s, out / "skills" / s.name)
+
+    # 3. Slash commands -> commands/<name>.md (flatten copilot-cli/commands/{agents,skills}/<name>/{agent,SKILL}.md)
+    command_names: list[str] = []
+    cmd_root = COPILOT / "commands"
+    for kind, fname in (("agents", "agent.md"), ("skills", "SKILL.md")):
+        d = cmd_root / kind
+        if not d.is_dir():
+            continue
+        for entry in sorted(p for p in d.iterdir() if p.is_dir()):
+            src_md = entry / fname
+            if src_md.is_file():
+                shutil.copy2(src_md, out / "commands" / f"{entry.name}.md")
+                command_names.append(entry.name)
+
+    # 4. Orchestrator agent (must be last so we have specialist + command lists)
+    orchestrator = ORCHESTRATOR_HEADER.format(
+        n_specialists=len(specialists),
+        n_commands=len(command_names),
+        specialist_table=_build_specialist_table(specialists),
+        command_list=_build_command_list(command_names),
+    )
+    (out / "agents" / "financial-services.md").write_text(
+        orchestrator, encoding="utf-8"
+    )
+
+    # 5. MCP template -> .mcp.json (host /mcp UI reads .mcp.json from plugin root).
+    mcp_src = COPILOT / "mcp" / ".mcp.json.template"
+    if mcp_src.is_file():
+        shutil.copy2(mcp_src, out / ".mcp.json")
+
+    # 6. README
+    (out / "README.md").write_text(
+        "# financial-services (umbrella plugin)\n\n"
+        "Bundles every Claude for Financial Services specialist + skill + slash\n"
+        "command into a single Claude/Copilot plugin install. Behaves as a markdown\n"
+        "orchestrator (`agents/financial-services.md`) that routes incoming requests\n"
+        "to the right specialist.\n\n"
+        "**Generated** by `scripts/sync-copilot.py` from the canonical sources under\n"
+        "`plugins/agent-plugins/`, `plugins/vertical-plugins/`, `plugins/partner-built/`,\n"
+        "and `copilot-cli/commands/`. Do not hand-edit.\n\n"
+        "Install:\n\n"
+        "```text\n"
+        "copilot plugin marketplace add dmauser/financial-services\n"
+        "copilot plugin install financial-services@claude-for-financial-services\n"
+        "```\n\n"
+        "For the runtime tool registration (`fs_capabilities`, `fs_<slug>_role`, ...) use\n"
+        "the npx extension instead: `npx -y github:dmauser/financial-services init`.\n",
+        encoding="utf-8",
+    )
+
+    return len(specialists) + len(seen_skills) + len(command_names) + 1
+
+
+def sync_copilot_marketplace(dest_dir: Path | None = None) -> int:
+    """Write copilot-cli/.copilot-plugin/marketplace.json - a Copilot-dedicated
+    marketplace registering only the umbrella `financial-services` plugin.
+
+    Kept separate from the upstream-tracked .claude-plugin/marketplace.json so
+    upstream syncs from anthropics/financial-services never conflict on it.
+    Users install via local path:
+
+        git clone https://github.com/dmauser/financial-services
+        copilot plugin marketplace add ./financial-services/copilot-cli
+        copilot plugin install financial-services@financial-services-copilot
+
+    `dest_dir` overrides the output directory (default: copilot-cli/.copilot-plugin/).
+    Used by check.py for drift detection.
+    """
+    out_dir = dest_dir if dest_dir is not None else (COPILOT / ".copilot-plugin")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "name": "financial-services-copilot",
+        "displayName": "Claude for Financial Services (Copilot CLI umbrella)",
+        "description": (
+            "Copilot-CLI-dedicated marketplace registering the single umbrella plugin "
+            "`financial-services`, which bundles all 10 specialist agents, all skills, "
+            "all 39 slash commands, and a markdown orchestrator that routes between them. "
+            "Source is generated by scripts/sync-copilot.py from the canonical plugins/ tree."
+        ),
+        "owner": {"name": "dmauser (Copilot CLI port)"},
+        "_generated": (
+            "GENERATED by scripts/sync-copilot.py - do not edit by hand. "
+            "Kept separate from the upstream-tracked .claude-plugin/marketplace.json."
+        ),
+        "plugins": [
+            {
+                "name": "financial-services",
+                "displayName": "Claude for Financial Services (umbrella)",
+                "source": "./plugins/financial-services",
+                "description": (
+                    "10 specialist agents, all skills, all 39 slash commands, plus a "
+                    "markdown orchestrator that routes incoming requests to the right "
+                    "specialist - all in a single Claude/Copilot plugin install. "
+                    "Functionally equivalent to the npx extension's runtime tools, "
+                    "delivered as Path B markdown content."
+                ),
+            }
+        ],
+    }
+    out = out_dir / "marketplace.json"
+    body = json.dumps(payload, indent=2) + "\n"
+    if not out.is_file() or out.read_text(encoding="utf-8") != body:
+        out.write_text(body, encoding="utf-8")
+    return 1
+
+
 def main() -> int:
     if not COPILOT.is_dir():
         print(f"ERROR: {COPILOT} does not exist - scaffold copilot-cli/ first", file=sys.stderr)
@@ -241,10 +515,13 @@ def main() -> int:
     slugs, sf = sync_specialists()
     verticals, vf = sync_verticals()
     cmd_a, cmd_s = sync_commands()
+    umbrella = sync_umbrella()
+    mkt = sync_copilot_marketplace()
     print(
         f"sync-copilot: {slugs} specialist(s), {verticals} vertical(s), "
         f"{cmd_a} command-agent(s), {cmd_s} command-skill(s), "
-        f"{sf + vf} mirrored file(s)."
+        f"{sf + vf} mirrored file(s), {umbrella} umbrella file(s), "
+        f"{mkt} copilot marketplace(s)."
     )
     return 0
 

@@ -70,8 +70,21 @@ Valid plugin names: `financial-analysis`, `investment-banking`, `equity-research
 
 If you previously installed and see `Marketplace "<name>" not found`, the registered name doesn't match what you typed after `@`. Run `copilot plugin marketplace list` to see the actual registered name and use that exact string.
 
+#### Path B umbrella — one plugin = everything
+
+If you want a single Path B install that gives you all 10 specialists + every skill + every slash command + a markdown orchestrator that routes between them, the fork ships a **Copilot-dedicated marketplace** under `copilot-cli/.copilot-plugin/` (kept separate from the upstream `.claude-plugin/marketplace.json` so daily upstream syncs never touch it):
+
+```text
+git clone https://github.com/dmauser/financial-services
+cd financial-services
+copilot plugin marketplace add ./copilot-cli
+copilot plugin install financial-services@financial-services-copilot
+```
+
+The umbrella plugin source is generated at [`copilot-cli/plugins/financial-services/`](./copilot-cli/plugins/financial-services/) by `scripts/sync-copilot.py` from the canonical `plugins/` tree, and drift-checked by `scripts/check.py`. **Markdown only** — no JS runtime tools; for in-process `fs_capabilities`, prefer Path A.
+
 > [!IMPORTANT]
-> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders, plus the umbrella "everything in one" install. Path B installs the same agent and skill **markdown content** one Claude plugin at a time, but the runtime JS tools are only loaded if the Copilot CLI plugin host honors a plugin's `extension.mjs` — that part of the marketplace contract is still evolving and unverified, and there is no umbrella plugin (install the per-vertical / per-specialist names listed above). **For the full experience, prefer Path A.**
+> **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B (marketplace install) delivers the same agent and skill **markdown content**; runtime JS tools are not loaded by the plugin host. The Path B umbrella above gets you the equivalent agent + skill + slash-command coverage with a markdown orchestrator that mimics the Path A routing behavior. **For full runtime tool registration, prefer Path A.**
 
 See [`copilot-cli/RECOMMENDATIONS.md`](./copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows once you're installed.
 

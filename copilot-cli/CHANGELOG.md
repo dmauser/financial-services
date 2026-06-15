@@ -6,13 +6,32 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
-- **Docs fix: `/plugin install ...@<marketplace>` syntax now matches reality.** Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` reads `.claude-plugin/marketplace.json` (not `.copilot-plugin/`) at the repo root and registers the marketplace under that file's `name` field — currently `claude-for-financial-services`, inherited unchanged from upstream Anthropic. README Path B now uses the correct name (`<plugin>@claude-for-financial-services`) and lists the 20 actual installable plugin names. Note that Path B has no umbrella plugin — use Path A for the all-in-one experience.
-- **Remove `copilot-cli/.copilot-plugin/` entirely.** Empirical testing confirmed Copilot CLI adopts Claude's plugin format verbatim and reads the same root `.claude-plugin/marketplace.json` Claude Code does, so a separate Copilot-native marketplace manifest is redundant. Path B install (`copilot plugin install <name>@claude-for-financial-services`) works against the existing 20 Claude plugins with zero Copilot-specific duplication. The `extension.mjs` JS runtime (Path A) was already loading content from `extensions/`, `verticals/`, `commands/`, `mcp/`, `instructions/` only — never from `.copilot-plugin/` — so removing it has no effect on the npx installer or the in-process tool registration. Cleaned up the corresponding `package.json` `files` entry, `bin/cli.mjs` copy list, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/workflows/upstream-sync.yml`, and the prior `sync_root_marketplace()` / drift-check logic added in 0.3.1.
-- Add `LICENSE` and `NOTICE` files at the `copilot-cli/` package root so the npm-publishable sub-package carries the Apache-2.0 text and upstream attribution to `anthropics/financial-services` independently of the repo root. License section added to `README.md`. Root `NOTICE` file also added.
+## [0.4.0] - Path B umbrella plugin
 
-## [0.3.1] - Pre-existing on `main` (superseded by the docs fix above)
+- **New umbrella plugin.** Adds a single Path B install that bundles every Claude for Financial Services specialist + skill + slash command + a markdown orchestrator. Source at `copilot-cli/plugins/financial-services/` is **generated** by `scripts/sync-copilot.py` from the canonical `plugins/` tree. Layout follows the standard Claude/Copilot plugin format (flat `agents/<slug>.md`, `skills/<name>/SKILL.md`, `commands/<name>.md`).
+  - 11 agents (10 specialists + 1 orchestrator at `agents/financial-services.md`)
+  - 66 unique skills (deduped across vertical + partner-built + specialist-bundled sources)
+  - 39 slash commands (flat copies of the existing `copilot-cli/commands/{agents,skills}/` wrappers)
+  - 12 MCP connector templates at `.mcp.json` (disabled by default)
+  - The orchestrator's system prompt instructs the model to mirror the Path A `fs_capabilities` behavior: list specialists + slash commands when asked, route incoming requests to the right specialist for any other ask. Markdown only - the in-process `fs_*` tool registration still requires Path A.
+- **New Copilot-dedicated marketplace** at `copilot-cli/.copilot-plugin/marketplace.json` registering only the umbrella plugin. **Kept entirely separate from the upstream-tracked root `.claude-plugin/marketplace.json`** so daily syncs from `anthropics/financial-services` never conflict on it. Install:
+  ```text
+  git clone https://github.com/dmauser/financial-services
+  cd financial-services
+  copilot plugin marketplace add ./copilot-cli
+  copilot plugin install financial-services@financial-services-copilot
+  ```
+  (The marketplace name is `financial-services-copilot` and is registered separately from the upstream `claude-for-financial-services` marketplace - install both if you want both.)
+- `scripts/sync-copilot.py` gains `sync_umbrella(dest=...)` and `sync_copilot_marketplace(dest_dir=...)` functions, both accepting an optional output path so `scripts/check.py` can regenerate into a temp dir and diff against the committed copies. Drift detection is now byte-for-byte enforced.
+- `scripts/check.py` 4d.5 - new drift check for the umbrella tree and the Copilot marketplace JSON; verified it actually fails when the committed tree is hand-edited.
 
-- Earlier attempt at fixing the marketplace install via a generated root `.copilot-plugin/marketplace.json`. Replaced by the docs fix in `[Unreleased]` once empirical testing showed Copilot CLI uses `.claude-plugin/` instead.
+## [0.3.2] - Cleanup
+
+- Remove `copilot-cli/.copilot-plugin/` (the speculative empty marketplace). Empirical testing confirmed Copilot CLI adopts Claude's plugin format verbatim and reads root `.claude-plugin/marketplace.json` directly. *(Subsequently restored in 0.4.0 with a different purpose - Copilot-dedicated marketplace registering only the umbrella plugin.)*
+
+## [0.3.1] - Pre-existing on `main` (superseded)
+
+- Earlier attempt at fixing the marketplace install via a generated root `.copilot-plugin/marketplace.json`. Replaced by the docs fix in 0.3.2 once empirical testing showed Copilot CLI uses `.claude-plugin/` instead.
 
 ## [0.3.0] - Real slash commands
 
