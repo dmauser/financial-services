@@ -242,6 +242,41 @@ if COPILOT.is_dir():
             json.loads(mcp_t.read_text())
         except json.JSONDecodeError as e:
             err(f"JSON parse: {rel(mcp_t)}: {e}")
+    # 4d.5 root .copilot-plugin/marketplace.json mirrors copilot-cli's, with
+    # `source` paths rebased to the repo root (so `/plugin marketplace add
+    # <owner>/<repo>` discovers it).
+    src_mp = COPILOT / ".copilot-plugin" / "marketplace.json"
+    dst_mp = ROOT / ".copilot-plugin" / "marketplace.json"
+    if src_mp.is_file():
+        if not dst_mp.is_file():
+            err(f"copilot-mirror: missing {rel(dst_mp)} (run scripts/sync-copilot.py)")
+        else:
+            checked += 1
+            try:
+                src_d = json.loads(src_mp.read_text(encoding="utf-8"))
+                dst_d = json.loads(dst_mp.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as e:
+                err(f"JSON parse: {rel(dst_mp)}: {e}")
+            else:
+                # Rebase src paths and compare plugin entries
+                rebased = []
+                for p in src_d.get("plugins", []):
+                    s = p.get("source", "")
+                    if s == "..":
+                        s = "copilot-cli"
+                    elif s.startswith("../"):
+                        s = "copilot-cli/" + s[3:]
+                    q = dict(p)
+                    q["source"] = s
+                    rebased.append(q)
+                if rebased != dst_d.get("plugins", []):
+                    err(f"copilot-mirror: {rel(dst_mp)} drifted from {rel(src_mp)} "
+                        f"(run scripts/sync-copilot.py)")
+                # Each rebased source must resolve to a real plugin
+                for p in rebased:
+                    src_dir = (ROOT / p["source"]).resolve()
+                    if not src_dir.is_dir():
+                        err(f"marketplace: {p['name']} source -> {p['source']} (path missing)")
 
 # --- 4c. marketplace source paths resolve ----------------------------------
 mp = ROOT / ".claude-plugin" / "marketplace.json"

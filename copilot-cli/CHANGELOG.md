@@ -6,6 +6,9 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
+- **Fix `/plugin install ...@financial-services-copilot` "Marketplace not found" error.** Copilot CLI's `/plugin marketplace add <owner>/<repo>` looks for `.copilot-plugin/marketplace.json` at the **repo root**, but the canonical file lives at `copilot-cli/.copilot-plugin/marketplace.json`. `scripts/sync-copilot.py` now generates `<repo-root>/.copilot-plugin/marketplace.json` from the canonical file, rebasing each plugin's `source` (`..` -> `copilot-cli`, `../verticals/...` -> `copilot-cli/verticals/...`) so the marketplace is discoverable from the repo root. `scripts/check.py` enforces no drift between the two.
+- Add `LICENSE` and `NOTICE` files at the `copilot-cli/` package root so the npm-publishable sub-package carries the Apache-2.0 text and upstream attribution to `anthropics/financial-services` independently of the repo root. License section added to `README.md`. Root `NOTICE` file also added.
+
 ## [0.3.0] - Real slash commands
 
 - Register **41 slash commands** with the Copilot CLI host via the `@github/copilot-sdk/extension` `joinSession({ commands })` API:

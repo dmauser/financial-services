@@ -1,6 +1,6 @@
 {
   "name": "financial-services",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "description": "GitHub Copilot CLI port of the Anthropic Claude for Financial Services agents, skills, and MCP connectors. The actual CLI lives in copilot-cli/.",
   "type": "module",
@@ -8,7 +8,9 @@
     "financial-services": "copilot-cli/bin/cli.mjs"
   },
   "files": [
-    "copilot-cli"
+    "copilot-cli",
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=18"

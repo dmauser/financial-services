@@ -48,9 +48,15 @@ Restart Copilot CLI after `init`. The extension surfaces as `financial-services`
 # or install a single specialist / vertical
 /plugin install pitch-agent@financial-services-copilot
 /plugin install equity-research@financial-services-copilot
+
+# Uninstall a single plugin
+/plugin uninstall financial-services@financial-services-copilot
+
+# Remove the marketplace entirely (also removes any plugins installed from it)
+/plugin marketplace remove financial-services-copilot
 ```
 
-Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.copilot-plugin/marketplace.json) — 1 umbrella + 9 verticals + 10 specialists.
+Plugins live in [`copilot-cli/.copilot-plugin/marketplace.json`](./copilot-cli/.copilot-plugin/marketplace.json) — 1 umbrella + 9 verticals + 10 specialists. Use `/plugin list` to see what's installed and `/plugin marketplace list` to see registered marketplaces.
 
 > [!IMPORTANT]
 > **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B delivers the same agent and skill **markdown content**, but the runtime JS tools are only loaded if the Copilot CLI plugin host honors a plugin's `extension.mjs` — that part of the marketplace contract is still evolving and unverified. Per-vertical / per-specialist plugins (e.g. `pitch-agent@`, `equity-research@`) install the markdown only; they don't carry `extension.mjs`. **For the full experience, prefer Path A.**
@@ -390,4 +396,4 @@ Everything here is markdown and YAML. Fork, edit, PR. For new content:
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+[Apache License 2.0](./LICENSE). See [`NOTICE`](./NOTICE) for attribution to the upstream `anthropics/financial-services` project.

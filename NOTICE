@@ -1,0 +1,32 @@
+Claude for Financial Services - GitHub Copilot CLI port
+Copyright (c) 2026 dmauser (https://github.com/dmauser)
+
+This product is a derivative work of:
+
+  Claude for Financial Services
+  Copyright (c) Anthropic, PBC
+  https://github.com/anthropics/financial-services
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this product except in compliance with the License. A copy of the License is
+distributed with this product in the LICENSE file at the repository root, and
+may also be obtained at:
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Modifications introduced by this fork (under copilot-cli/) port the upstream
+agents, skills, slash commands, and MCP connector templates to the GitHub
+Copilot CLI as an installable extension and plugin marketplace. The Claude
+Cowork plugins and Managed Agent cookbooks under plugins/ and
+managed-agent-cookbooks/ are mirrored from upstream as the single source of
+truth for the Copilot CLI port; install those from the upstream repository.
+
+Third-party components retain their own license terms; see in particular:
+
+  plugins/partner-built/spglobal/LICENSE         (S&P Global)
+  plugins/vertical-plugins/financial-analysis/skills/skill-creator/LICENSE.txt
+  copilot-cli/verticals/spglobal/skills/*/LICENSE
+  copilot-cli/verticals/financial-analysis/skills/skill-creator/LICENSE.txt
+
+"Claude" and "Anthropic" are trademarks of Anthropic, PBC, used here only in a
+descriptive sense to identify the upstream work. No endorsement is implied.

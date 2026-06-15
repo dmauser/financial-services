@@ -1,0 +1,131 @@
+{
+  "name": "financial-services-copilot",
+  "displayName": "Claude for Financial Services (Copilot CLI)",
+  "description": "GitHub Copilot CLI port of the Anthropic Claude for Financial Services agents, skills, and MCP connectors. Same content as the Cowork/Claude Code marketplace, registered for /plugin install in Copilot CLI.",
+  "owner": {
+    "name": "Anthropic FSI"
+  },
+  "plugins": [
+    {
+      "name": "financial-services",
+      "displayName": "Claude for Financial Services (umbrella)",
+      "source": "copilot-cli",
+      "description": "All 10 specialists, 9 verticals, 39 commands, and 12 MCP connectors as a single Copilot CLI extension. Install once via npx -y github:dmauser/financial-services init or /plugin install."
+    },
+    {
+      "name": "financial-analysis",
+      "displayName": "Financial Analysis (vertical)",
+      "source": "copilot-cli/verticals/financial-analysis",
+      "description": "Core financial modeling and analysis tools: DCF, comps, LBO, 3-statement models, competitive analysis, and deck QC."
+    },
+    {
+      "name": "investment-banking",
+      "displayName": "Investment Banking (vertical)",
+      "source": "copilot-cli/verticals/investment-banking",
+      "description": "CIMs, teasers, process letters, buyer lists, merger models, deal tracking."
+    },
+    {
+      "name": "equity-research",
+      "displayName": "Equity Research (vertical)",
+      "source": "copilot-cli/verticals/equity-research",
+      "description": "Earnings notes, initiations, model updates, thesis and catalyst tracking."
+    },
+    {
+      "name": "private-equity",
+      "displayName": "Private Equity (vertical)",
+      "source": "copilot-cli/verticals/private-equity",
+      "description": "Sourcing, screening, diligence checklists, IC memos, portfolio monitoring."
+    },
+    {
+      "name": "wealth-management",
+      "displayName": "Wealth Management (vertical)",
+      "source": "copilot-cli/verticals/wealth-management",
+      "description": "Client reviews, financial plans, rebalancing, reporting, TLH."
+    },
+    {
+      "name": "fund-admin",
+      "displayName": "Fund Administration (vertical)",
+      "source": "copilot-cli/verticals/fund-admin",
+      "description": "GL recon, break tracing, accruals, roll-forwards, variance commentary, NAV tie-out."
+    },
+    {
+      "name": "operations",
+      "displayName": "Operations (vertical)",
+      "source": "copilot-cli/verticals/operations",
+      "description": "KYC document parsing and rules-grid evaluation."
+    },
+    {
+      "name": "lseg",
+      "displayName": "LSEG (partner)",
+      "source": "copilot-cli/verticals/lseg",
+      "description": "Bond RV, swap curves, FX carry, options vol, macro-rates monitoring on LSEG data."
+    },
+    {
+      "name": "sp-global",
+      "displayName": "S&P Global (partner)",
+      "source": "copilot-cli/verticals/spglobal",
+      "description": "Tear sheets, earnings previews, funding digests on S&P Capital IQ."
+    },
+    {
+      "name": "pitch-agent",
+      "displayName": "Pitch Agent",
+      "source": "copilot-cli/extensions/financial-services/specialists/pitch-agent",
+      "description": "Comps, precedents, LBO to a branded pitch deck, end to end."
+    },
+    {
+      "name": "meeting-prep-agent",
+      "displayName": "Meeting Prep Agent",
+      "source": "copilot-cli/extensions/financial-services/specialists/meeting-prep-agent",
+      "description": "Briefing pack before every client meeting."
+    },
+    {
+      "name": "market-researcher",
+      "displayName": "Market Researcher",
+      "source": "copilot-cli/extensions/financial-services/specialists/market-researcher",
+      "description": "Sector or theme to industry overview, competitive landscape, peer comps, ideas shortlist."
+    },
+    {
+      "name": "earnings-reviewer",
+      "displayName": "Earnings Reviewer",
+      "source": "copilot-cli/extensions/financial-services/specialists/earnings-reviewer",
+      "description": "Earnings call and filings to model update to note draft."
+    },
+    {
+      "name": "model-builder",
+      "displayName": "Model Builder",
+      "source": "copilot-cli/extensions/financial-services/specialists/model-builder",
+      "description": "DCF, LBO, 3-statement, comps - live in Excel."
+    },
+    {
+      "name": "valuation-reviewer",
+      "displayName": "Valuation Reviewer",
+      "source": "copilot-cli/extensions/financial-services/specialists/valuation-reviewer",
+      "description": "Ingests GP packages, runs valuation template, stages LP reporting."
+    },
+    {
+      "name": "gl-reconciler",
+      "displayName": "GL Reconciler",
+      "source": "copilot-cli/extensions/financial-services/specialists/gl-reconciler",
+      "description": "Finds breaks, traces root cause, routes for sign-off."
+    },
+    {
+      "name": "month-end-closer",
+      "displayName": "Month-End Closer",
+      "source": "copilot-cli/extensions/financial-services/specialists/month-end-closer",
+      "description": "Accruals, roll-forwards, variance commentary."
+    },
+    {
+      "name": "statement-auditor",
+      "displayName": "Statement Auditor",
+      "source": "copilot-cli/extensions/financial-services/specialists/statement-auditor",
+      "description": "Audits LP statements before distribution."
+    },
+    {
+      "name": "kyc-screener",
+      "displayName": "KYC Screener",
+      "source": "copilot-cli/extensions/financial-services/specialists/kyc-screener",
+      "description": "Parses onboarding docs, runs the rules engine, flags gaps."
+    }
+  ],
+  "_generated": "GENERATED by scripts/sync-copilot.py from copilot-cli/.copilot-plugin/marketplace.json - do not edit by hand"
+}

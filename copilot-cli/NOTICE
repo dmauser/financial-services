@@ -1,0 +1,16 @@
+Claude for Financial Services - GitHub Copilot CLI port
+Copyright (c) 2026 dmauser (https://github.com/dmauser)
+
+This package is a derivative work of "Claude for Financial Services"
+(https://github.com/anthropics/financial-services), Copyright (c) Anthropic, PBC,
+licensed under the Apache License, Version 2.0. See the LICENSE file
+distributed alongside this NOTICE, or http://www.apache.org/licenses/LICENSE-2.0.
+
+Modifications: the contents of this directory port the upstream agents, skills,
+slash commands, and MCP connector templates to the GitHub Copilot CLI as an
+installable extension and plugin marketplace. Files under extensions/,
+verticals/, commands/, mcp/, and instructions/ are generated mirrors of the
+upstream sources at plugins/ in the parent repository.
+
+"Claude" and "Anthropic" are trademarks of Anthropic, PBC, used here only in a
+descriptive sense to identify the upstream work. No endorsement is implied.

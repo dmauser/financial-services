@@ -33,6 +33,10 @@ npx financial-services status
 npx financial-services mcp list
 npx financial-services mcp enable daloopa
 npx financial-services mcp enable factset
+
+# Uninstall (matches whichever scope you installed)
+npx -y github:dmauser/financial-services uninstall            # user scope (~/.copilot)
+npx -y github:dmauser/financial-services uninstall --project  # project scope (./.copilot)
 ```
 
 After install, restart Copilot CLI (or run `/restart`) and confirm with `/env` that the extension, agents, skills, and any enabled MCP servers are loaded.
@@ -49,6 +53,17 @@ Or install individual plugins from the marketplace - e.g. just the equity-resear
 ```text
 /plugin install equity-research@financial-services-copilot
 /plugin install pitch-agent@financial-services-copilot
+```
+
+Uninstall a single plugin, or remove the marketplace altogether (which also removes anything installed from it):
+
+```text
+/plugin list                                                  # see what's installed
+/plugin uninstall financial-services@financial-services-copilot
+/plugin uninstall equity-research@financial-services-copilot
+
+/plugin marketplace list                                      # see registered marketplaces
+/plugin marketplace remove financial-services-copilot
 ```
 
 The native marketplace manifest lives at [`.copilot-plugin/marketplace.json`](./.copilot-plugin/marketplace.json) and points at the same files the `npx` installer copies.
@@ -82,6 +97,17 @@ npx -y github:dmauser/financial-services init
 
 # 2. Enable the connectors you have
 npx financial-services mcp enable daloopa
+```
+
+## License & attribution
+
+This package is distributed under the [Apache License 2.0](./LICENSE).
+
+It is a derivative work of [`anthropics/financial-services`](https://github.com/anthropics/financial-services), Copyright (c) Anthropic, PBC, also licensed under Apache-2.0. The agent prompts, skill markdown, slash commands, and MCP connector templates shipped under `extensions/`, `verticals/`, `commands/`, and `mcp/` are generated mirrors of the upstream sources; the modifications introduced by this fork wire that content into the GitHub Copilot CLI as an installable extension and plugin marketplace. See [`NOTICE`](./NOTICE) for the full attribution and [`CHANGELOG.md`](./CHANGELOG.md) for the list of changes.
+
+Third-party skills retain their own license terms - see `verticals/spglobal/skills/*/LICENSE` and `verticals/financial-analysis/skills/skill-creator/LICENSE.txt`.
+
+"Claude" and "Anthropic" are trademarks of Anthropic, PBC, used descriptively to identify the upstream work.
 npx financial-services mcp enable aiera
 
 # 3. Open Copilot CLI in any repo and confirm load
