@@ -41,46 +41,31 @@ Restart Copilot CLI after `init`. The extension surfaces as `financial-services`
 
 ### Path B — Plugin marketplace
 
-> Copilot CLI's `copilot plugin marketplace add <owner>/<repo>` clones the repo and reads marketplace manifests from the repo root. This fork ships **two** marketplaces side-by-side:
-> - `.claude-plugin/marketplace.json` -> registers as **`claude-for-financial-services`** (inherited unchanged from upstream Anthropic; 20 individual plugins)
-> - `.copilot-plugin/marketplace.json` -> registers as **`financial-services-copilot`** (Copilot-dedicated; one umbrella plugin that bundles everything plus a routing orchestrator)
->
-> A single `copilot plugin marketplace add dmauser/financial-services` registers both. Pick whichever install style you prefer below — they're not mutually exclusive.
+> This fork's `.claude-plugin/marketplace.json` is **intentionally repurposed** as the Copilot CLI umbrella marketplace `financial-services-copilot`, registering the single `financial-services` umbrella plugin. (Copilot CLI's `marketplace add <owner>/<repo>` only reads `.claude-plugin/`, so to deliver the umbrella via repo-URL we live in that file.) Upstream's per-specialist 20-plugin marketplace is available unchanged from `anthropics/financial-services` directly.
 
 ```text
-# 1. Register both marketplaces (one-time, one command)
+# 1. Register the marketplace (one-time)
 copilot plugin marketplace add dmauser/financial-services
 
-# 2. Discover what's available in each
-copilot plugin marketplace list
-copilot plugin marketplace browse claude-for-financial-services
-copilot plugin marketplace browse financial-services-copilot
-
-# 3a. Per-specialist install (claude-for-financial-services)
-copilot plugin install financial-analysis@claude-for-financial-services
-copilot plugin install pitch-agent@claude-for-financial-services
-copilot plugin install equity-research@claude-for-financial-services
-
-# 3b. -OR- single umbrella install (financial-services-copilot)
+# 2. Install the umbrella (one plugin = all 10 specialists + 66 skills + 39 slash commands + orchestrator)
 copilot plugin install financial-services@financial-services-copilot
 
-# 4. Verify
+# 3. Verify
 copilot plugin list
 
-# Uninstall a single plugin
-copilot plugin uninstall financial-analysis@claude-for-financial-services
+# Uninstall
 copilot plugin uninstall financial-services@financial-services-copilot
-
-# Remove a marketplace altogether (also removes plugins installed from it)
-copilot plugin marketplace remove claude-for-financial-services
 copilot plugin marketplace remove financial-services-copilot
 ```
 
-Valid plugin names in `claude-for-financial-services`: `financial-analysis`, `investment-banking`, `equity-research`, `private-equity`, `wealth-management`, `fund-admin`, `operations`, `lseg`, `sp-global`, `pitch-agent`, `market-researcher`, `earnings-reviewer`, `meeting-prep-agent`, `model-builder`, `gl-reconciler`, `kyc-screener`, `valuation-reviewer`, `month-end-closer`, `statement-auditor`, `claude-for-msft-365-install`.
+The umbrella plugin source is generated at [`copilot-cli/plugins/financial-services/`](./copilot-cli/plugins/financial-services/) by `scripts/sync-copilot.py` from the canonical `plugins/` tree and drift-checked by `scripts/check.py`. It bundles all 10 specialist agents, all 66 unique skills, all 39 slash commands, the shared MCP template, **and** a markdown orchestrator at `agents/financial-services.md` that routes incoming requests to the right specialist (mimicking Path A's `fs_capabilities` behavior).
 
-The only plugin in `financial-services-copilot` is `financial-services` (the umbrella). It bundles all 10 specialist agents, all 66 unique skills, all 39 slash commands, the shared MCP template, **and** a markdown orchestrator at `agents/financial-services.md` that routes incoming requests to the right specialist (mimicking Path A's `fs_capabilities` behavior). Source generated at [`copilot-cli/plugins/financial-services/`](./copilot-cli/plugins/financial-services/) by `scripts/sync-copilot.py` and drift-checked by `scripts/check.py`.
+Want the upstream Claude per-specialist plugins instead? Install from upstream directly:
 
-If you previously installed and see `Marketplace "<name>" not found`, the registered name doesn't match what you typed after `@`. Run `copilot plugin marketplace list` to see the actual registered name and use that exact string.
+```text
+copilot plugin marketplace add anthropics/financial-services
+copilot plugin install financial-analysis@claude-for-financial-services
+```
 
 > [!IMPORTANT]
 > **Path A vs Path B parity.** Path A (npx extension) runs `extension.mjs` + `registry.mjs` and exposes runtime tools — `fs_capabilities` (emoji table of all specialists + verticals), `fs_instructions`, `fs_mcp_status`, plus per-agent and per-skill loaders. Path B (marketplace install) delivers the same agent and skill **markdown content**; runtime JS tools are not loaded by the plugin host. The Path B umbrella gets you equivalent agent + skill + slash-command coverage with a markdown orchestrator that mimics Path A's routing behavior. **For full runtime tool registration, prefer Path A.**

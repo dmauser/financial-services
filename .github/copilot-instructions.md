@@ -109,9 +109,9 @@ npx -y github:dmauser/financial-services init
 # This repo only:
 npx -y github:dmauser/financial-services init --project
 
-# Or via Copilot CLI's native marketplace:
+# Or via Copilot CLI's native marketplace (umbrella plugin = all specialists + skills + commands):
 # /plugin marketplace add dmauser/financial-services
-# /plugin install pitch-agent@financial-services-copilot
+# /plugin install financial-services@financial-services-copilot
 ```
 
 See [`copilot-cli/RECOMMENDATIONS.md`](../copilot-cli/RECOMMENDATIONS.md) for day-in-the-life workflows.

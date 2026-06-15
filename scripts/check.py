@@ -247,9 +247,8 @@ if COPILOT.is_dir():
     # the canonical sources. Re-run the generator into a temp tree and
     # diff so any hand-edit (or out-of-date sync) shows up as drift.
     umbrella = COPILOT / "plugins" / "financial-services"
-    cp_mp = COPILOT / ".copilot-plugin" / "marketplace.json"
-    root_mp = ROOT / ".copilot-plugin" / "marketplace.json"
-    if umbrella.is_dir() or cp_mp.is_file() or root_mp.is_file():
+    root_mp = ROOT / ".claude-plugin" / "marketplace.json"
+    if umbrella.is_dir() or root_mp.is_file():
         import importlib.util as _ilu
         import tempfile as _tmp
         spec = _ilu.spec_from_file_location(
@@ -281,15 +280,13 @@ if COPILOT.is_dir():
                             err(f"copilot-mirror: {rel(umbrella)}/ drifted from "
                                 f"sync-copilot.py output (run scripts/sync-copilot.py)")
                         checked += 1
-                    for live_mp, shadow_mp_file in (
-                        (cp_mp, shadow_mp_dir / "copilot-cli" / ".copilot-plugin" / "marketplace.json"),
-                        (root_mp, shadow_mp_dir / "root" / ".copilot-plugin" / "marketplace.json"),
-                    ):
-                        if live_mp.is_file() and shadow_mp_file.is_file():
-                            if live_mp.read_text(encoding="utf-8") != shadow_mp_file.read_text(encoding="utf-8"):
-                                err(f"copilot-mirror: {rel(live_mp)} drifted from "
-                                    f"sync-copilot.py output (run scripts/sync-copilot.py)")
-                            checked += 1
+                    shadow_mp_file = shadow_mp_dir / "marketplace.json"
+                    if root_mp.is_file() and shadow_mp_file.is_file():
+                        if root_mp.read_text(encoding="utf-8") != shadow_mp_file.read_text(encoding="utf-8"):
+                            err(f"copilot-mirror: {rel(root_mp)} drifted from "
+                                f"sync-copilot.py output (run scripts/sync-copilot.py). "
+                                f"This file is intentionally Copilot-only and replaces upstream's per-specialist marketplace.")
+                        checked += 1
 
 # --- 4c. marketplace source paths resolve ----------------------------------
 mp = ROOT / ".claude-plugin" / "marketplace.json"

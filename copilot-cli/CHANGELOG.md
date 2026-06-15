@@ -6,15 +6,25 @@ The version field in `package.json` is bumped exactly once per branch (single pa
 
 ## [Unreleased]
 
-## [0.4.1] - Repo-URL umbrella install
+## [0.4.2] - Repurpose root .claude-plugin marketplace as Copilot umbrella
 
-- **Add root-level `.copilot-plugin/marketplace.json`** so a single `copilot plugin marketplace add dmauser/financial-services` registers BOTH marketplaces this fork ships in one shot - the upstream `claude-for-financial-services` (read from `.claude-plugin/marketplace.json`) AND the new `financial-services-copilot` umbrella (read from `.copilot-plugin/marketplace.json`). No clone required for the umbrella install:
+- **Critical fix.** Copilot CLI's `marketplace add <owner>/<repo>` ONLY reads `.claude-plugin/marketplace.json` at the repo root - `.copilot-plugin/` is ignored (verified empirically by user 2026-06-14: `Marketplace "financial-services-copilot" not found`). The 0.4.0/0.4.1 dual-marketplace approach didn't work.
+- **Fix:** `scripts/sync-copilot.py` `sync_copilot_marketplace()` now writes the repo-root `.claude-plugin/marketplace.json` directly, replacing the upstream per-specialist marketplace with a Copilot-only one (name `financial-services-copilot`, single `financial-services` umbrella plugin entry pointing to `./copilot-cli/plugins/financial-services`). The upstream Anthropic per-specialist marketplace remains available unchanged from `anthropics/financial-services` directly.
+- One-shot install now actually works:
   ```text
   copilot plugin marketplace add dmauser/financial-services
   copilot plugin install financial-services@financial-services-copilot
   ```
-  The `.copilot-plugin/` directory at root is sibling to (not inside) `.claude-plugin/`, so upstream syncs from `anthropics/financial-services` still never conflict on it.
-- `scripts/sync-copilot.py` `sync_copilot_marketplace()` now writes both root and `copilot-cli/` copies of the dedicated Copilot marketplace, with `source` paths adjusted per location (`./copilot-cli/plugins/financial-services` from root, `./plugins/financial-services` from `copilot-cli/`). Both are drift-checked by `scripts/check.py`.
+- Removed `copilot-cli/.copilot-plugin/` (was unreachable - Copilot CLI doesn't scan that path).
+- Removed root `.copilot-plugin/` (introduced in 0.4.1, also unreachable).
+- `.github/workflows/upstream-sync.yml`: reviewer checklist now flags `.claude-plugin/marketplace.json` as intentionally divergent from upstream — discard upstream's version on every sync; check.py drift-fails otherwise.
+- `scripts/check.py` 4d.5: drift-check now targets the root `.claude-plugin/marketplace.json` instead of `copilot-cli/.copilot-plugin/`.
+- `.github/copilot-instructions.md`: marketplace install snippet updated to umbrella plugin.
+- `copilot-cli/package.json` `files`: dropped the `.copilot-plugin` entry (no longer exists).
+
+## [0.4.1] - Repo-URL umbrella install (superseded - did not actually work)
+
+- Added root `.copilot-plugin/marketplace.json` thinking Copilot CLI would scan it alongside `.claude-plugin/`. It does not. Fixed in 0.4.2 by writing the umbrella marketplace to `.claude-plugin/` directly.
 
 ## [0.4.0] - Path B umbrella plugin
 
