@@ -46,6 +46,10 @@ const KEYS = {
   gateway_token: { pattern: /./, hint: "gateway API key", secret: true },
   gateway_auth_header: { pattern: /^(x-api-key|authorization)$/i, hint: "auth header scheme (default: x-api-key)" },
   gateway_api_format: { pattern: /^(anthropic|bedrock|vertex)$/i, hint: "anthropic | bedrock | vertex" },
+  gateway_auth_source: {
+    pattern: /^entra$/,
+    hint: "'entra' to use the Entra SSO access token as the gateway Bearer (no gateway_token needed); requires entra_scope",
+  },
   mcp_servers: { pattern: /^\[.*\]$/, hint: "JSON array of {url, label, headers?, discover?}" },
   inference_headers: { pattern: /^\{.*\}$/, hint: "JSON object of extra headers to attach to every model request" },
   bootstrap_url: { pattern: /^https:\/\//, hint: "HTTPS endpoint returning per-user config" },
@@ -81,9 +85,81 @@ const KEYS = {
     pattern: /^[\w.]+(,[\w.]+)*$/,
     hint: "comma-separated feature slugs to lock for users, e.g. skills.authoring",
   },
+  access_policies: {
+    pattern: /^\[.*\]$/s,
+    hint: "JSON array of policy statements — see commands/access-policies.md; e.g. [{\"effect\":\"deny\",\"action\":\"addin.access\",\"resource\":{...}}]",
+    validate: (v) => {
+      let arr;
+      try {
+        arr = JSON.parse(v);
+      } catch (e) {
+        throw new Error(`access_policies is not valid JSON: ${e.message}`);
+      }
+      if (!Array.isArray(arr)) return ["expected a JSON array of statements"];
+      return arr.flatMap((st, i) => validateStatement(st, `statement[${i}]`));
+    },
+  },
 };
 
-const NEEDS_ENTRA = ["aws_role_arn", "graph_client_id", "entra_scope"];
+// Structural check for one access_policies statement. Warn-only: the add-in itself
+// skips and reports malformed statements rather than failing, so this catches typos
+// before deploy without being stricter than the runtime.
+const EFFECTS = ["allow", "deny"];
+const RESOURCE_TYPES = ["open_file", "uploaded_file"];
+const STRING_OPS = ["equals", "startsWith", "endsWith"];
+// Mirrors the add-in: a GUID supports only equals | exists (a prefix of a GUID is
+// meaningless); a name supports the string operators too. Other pairings are dropped
+// at runtime, so warn here.
+const OPERATORS_BY_TYPE = {
+  mip_label_guid: ["equals", "exists"],
+  mip_label_name: ["equals", "startsWith", "endsWith", "exists"],
+};
+
+function validateStatement(st, at) {
+  if (typeof st !== "object" || st === null || Array.isArray(st)) return [`${at}: expected an object`];
+  const problems = [];
+  if (!EFFECTS.includes(st.effect)) problems.push(`${at}.effect: expected "allow" or "deny"`);
+  const slugs = Array.isArray(st.action) ? st.action : [st.action];
+  const actionOk = slugs.length > 0 && slugs.every((a) => typeof a === "string" && a.trim());
+  if (!actionOk) problems.push(`${at}.action: expected a non-empty slug string or array of them`);
+  if (st.resource !== undefined) {
+    const r = st.resource;
+    if (typeof r !== "object" || r === null) return [...problems, `${at}.resource: expected an object`];
+    if (!RESOURCE_TYPES.includes(r.type)) problems.push(`${at}.resource.type: expected ${RESOURCE_TYPES.join(" | ")}`);
+    if (r.description !== undefined && typeof r.description !== "string") {
+      problems.push(`${at}.resource.description: expected a string`);
+    }
+    if (!Array.isArray(r.identifiers)) {
+      problems.push(`${at}.resource.identifiers: expected an array`);
+    } else if (r.identifiers.length === 0) {
+      problems.push(`${at}.resource.identifiers: empty — the statement will never match; drop \`resource\` to apply everywhere`);
+    } else {
+      r.identifiers.forEach((id, j) => problems.push(...validateIdentifier(id, `${at}.resource.identifiers[${j}]`)));
+    }
+  }
+  return problems;
+}
+
+function validateIdentifier(id, at) {
+  if (typeof id !== "object" || id === null) return [`${at}: expected an object`];
+  const problems = [];
+  const allowed = OPERATORS_BY_TYPE[id.type];
+  if (!allowed) problems.push(`${at}.type: expected ${Object.keys(OPERATORS_BY_TYPE).join(" | ")}`);
+  const ops = [...STRING_OPS.filter((op) => op in id), ..."exists" in id ? ["exists"] : []];
+  if (ops.length !== 1) {
+    problems.push(`${at}: expected exactly one operator (equals | startsWith | endsWith | exists), got ${ops.length}`);
+    return problems;
+  }
+  const [op] = ops;
+  if (allowed && !allowed.includes(op)) {
+    problems.push(`${at}: ${id.type} does not support ${op} (only ${allowed.join(" | ")})`);
+  } else if (op === "exists" ? typeof id.exists !== "boolean" : typeof id[op] !== "string" || !id[op].trim()) {
+    problems.push(`${at}.${op}: expected a ${op === "exists" ? "boolean" : "non-empty string"}`);
+  }
+  return problems;
+}
+
+const NEEDS_ENTRA = ["aws_role_arn", "graph_client_id", "entra_scope", "gateway_auth_source"];
 
 async function main() {
   const [host, out, ...pairs] = process.argv.slice(2);
@@ -97,10 +173,7 @@ async function main() {
     console.error("error: Amazon Bedrock (aws_role_arn/aws_region) is not currently supported for Outlook");
     process.exit(1);
   }
-  if (host !== "outlook" && pairs.some((p) => p.startsWith("graph_client_id="))) {
-    console.warn("note: graph_client_id only applies to Outlook; it has no effect in the office manifest");
-  }
-  // graph_cloud is relevant to both manifests: in Outlook it steers Graph +
+  // graph_client_id and graph_cloud apply to both manifests: in Outlook it steers Graph +
   // Entra sign-in; in office it steers the Entra SSO authority.
 
   const params = new URLSearchParams();
@@ -113,6 +186,7 @@ async function main() {
     if (!spec) throw new Error(`unknown key: ${k}\n  valid: ${Object.keys(KEYS).join(", ")}`);
     if (!v) throw new Error(`empty value for ${k}`);
     if (!spec.pattern.test(v)) console.warn(`warn: ${k}=${v} — expected ${spec.hint}`);
+    for (const msg of spec.validate?.(v) ?? []) console.warn(`warn: ${k} ${msg}`);
     if (spec.secret) {
       console.warn(
         `note: ${k} in the manifest applies to every user. If it varies per user, set it via update-user-attrs instead.`,
@@ -127,6 +201,14 @@ async function main() {
   }
   if (params.has("entra_scope") && !params.has("graph_client_id")) {
     throw new Error("entra_scope requires graph_client_id (the scope is requested as your own Entra app, not the default)");
+  }
+  if (params.has("gateway_auth_source") && !params.has("entra_scope")) {
+    throw new Error(
+      "gateway_auth_source=entra requires entra_scope (the gateway Bearer must be audienced to your API, not Microsoft Graph)",
+    );
+  }
+  if (params.has("gateway_auth_source") && params.has("gateway_token")) {
+    console.warn("note: gateway_auth_source=entra supersedes gateway_token — drop gateway_token from this manifest");
   }
   // A non-global graph_cloud needs a BYO Entra app — Anthropic's multi-tenant
   // app exists only in the commercial cloud, so the default client_id against
