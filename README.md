@@ -253,7 +253,6 @@ Start with **financial-analysis** — it carries the shared modeling skills and 
 | **[investment-banking](./plugins/vertical-plugins/investment-banking)** | CIMs, teasers, process letters, buyer lists, merger models, deal tracking. |
 | **[equity-research](./plugins/vertical-plugins/equity-research)** | Earnings notes, initiations, model updates, thesis and catalyst tracking. |
 | **[private-equity](./plugins/vertical-plugins/private-equity)** | Sourcing, screening, diligence checklists, IC memos, portfolio monitoring. |
-| **[wealth-management](./plugins/vertical-plugins/wealth-management)** | Client reviews, financial plans, rebalancing, reporting, TLH. |
 | **[fund-admin](./plugins/vertical-plugins/fund-admin)** | GL recon, break tracing, accruals, roll-forwards, variance commentary, NAV tie-out. |
 | **[operations](./plugins/vertical-plugins/operations)** | KYC document parsing and rules-grid evaluation. |
 | **[lseg](./plugins/partner-built/lseg)** *(partner)* | Bond RV, swap curves, FX carry, options vol, macro-rates monitoring on LSEG data. |
@@ -375,20 +374,6 @@ These are reference templates — they get better when you tune them to how your
 | portfolio-monitoring | `/portfolio` | Track portfolio company KPIs and variances |
 | value-creation-plan | `/value-creation` | Post-close 100-day plans and EBITDA bridges |
 | ai-readiness | `/ai-readiness` | Assess a portfolio company's AI readiness |
-
-</details>
-
-<details>
-<summary><b>wealth-management</b> — advisor workflows</summary>
-
-| Skill | Command | Description |
-|---|---|---|
-| client-review | `/client-review` | Prep for client meetings with performance and talking points |
-| financial-plan | `/financial-plan` | Retirement, education, estate, and cash-flow projections |
-| portfolio-rebalance | `/rebalance` | Allocation drift analysis and tax-aware rebalancing |
-| client-report | `/client-report` | Client-facing performance reports |
-| investment-proposal | `/proposal` | Proposals for prospective clients |
-| tax-loss-harvesting | `/tlh` | Identify TLH opportunities and manage wash sales |
 
 </details>
 
